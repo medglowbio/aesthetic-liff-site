@@ -44,6 +44,8 @@ if (META_PIXEL_ID && META_PIXEL_ID !== 'YOUR_META_PIXEL_ID') {
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
+html { scroll-behavior: smooth; }
+
 body {
   font-family: var(--font-sans);
   background: var(--cream);
@@ -110,7 +112,7 @@ body {
 
 /* ── Views ── */
 .view { display: none; padding-bottom: 100px; }
-.view.active { display: block; }
+.view.active { display: block; animation: softFadeIn .28s ease both; }
 
 /* ── Concern view ── */
 .concern-intro {
@@ -162,16 +164,90 @@ body {
   font-size: 13px;
   letter-spacing: 0.03em;
   cursor: pointer;
-  transition: border-color .2s, background .2s, transform .15s;
+  transition: border-color .2s, background .2s, color .2s, transform .15s;
 }
 .keyword-chip:hover {
   border-color: var(--gold-light);
   background: #fff;
 }
+.keyword-chip.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--warm-white);
+}
+.keyword-chip.active .keyword-count { color: var(--warm-white); }
 .keyword-chip:active { transform: scale(0.96); }
 .keyword-count {
   color: var(--gold);
   font-size: 11px;
+}
+.concern-selection {
+  margin: 0 16px 16px;
+  padding: 14px;
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius);
+  background: var(--warm-white);
+  display: none;
+  animation: softLift .28s ease both;
+}
+.concern-selection.visible { display: block; }
+.concern-selection-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.concern-selection-title {
+  font-size: 12px;
+  color: var(--ink-soft);
+  letter-spacing: 0.06em;
+}
+.concern-clear-btn {
+  border: none;
+  background: none;
+  color: var(--gold);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.concern-selected-tags,
+.concern-match-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.concern-selected-tag,
+.concern-match-tag {
+  border-radius: 100px;
+  background: var(--gold-pale);
+  color: var(--gold);
+  padding: 4px 9px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.concern-recommend {
+  padding: 0 16px 110px;
+  display: none;
+}
+.concern-recommend.visible { display: block; animation: softFadeIn .28s ease both; }
+.concern-recommend-title {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  color: var(--ink-soft);
+  letter-spacing: 0.08em;
+  margin: 4px 2px 10px;
+}
+.concern-recommend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.concern-empty {
+  padding: 18px 4px;
+  color: var(--ink-muted);
+  font-size: 13px;
+  letter-spacing: 0.04em;
 }
 
 /* ── Browse view ── */
@@ -192,7 +268,7 @@ body {
   cursor: pointer;
   transition: border-color .2s, box-shadow .2s;
 }
-.category-item:hover { border-color: var(--gold-light); }
+.category-item:hover { border-color: var(--gold-light); box-shadow: var(--shadow); }
 .category-item:active { transform: scale(0.98); }
 .cat-left { display: flex; align-items: center; gap: 12px; }
 .cat-icon { font-size: 20px; }
@@ -311,11 +387,36 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  animation: cardIn .28s ease both;
 }
 .treatment-card:active { transform: scale(0.98); }
 .treatment-card:hover { border-color: var(--gold-light); box-shadow: var(--shadow); }
 .treatment-card.selected { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
 .treatment-card-body { flex: 1; min-width: 0; }
+.treatment-card-media {
+  width: 86px;
+  align-self: stretch;
+  min-height: 86px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid var(--border-gold);
+  background: var(--gold-pale);
+}
+.treatment-card-media img {
+  width: 100%;
+  height: 100%;
+  min-height: 86px;
+  display: block;
+  object-fit: cover;
+}
+.treatment-card.has-image {
+  align-items: stretch;
+  padding: 10px;
+}
+.treatment-card.has-image .treatment-card-body {
+  padding: 5px 0 5px 2px;
+}
 .treatment-card-right {
   display: flex;
   flex-direction: column;
@@ -372,6 +473,7 @@ body {
   transition: all .2s;
   flex-shrink: 0;
 }
+.card-select-btn:active { transform: scale(0.9); }
 .treatment-card.selected .card-select-btn {
   background: var(--gold);
   border-color: var(--gold);
@@ -429,13 +531,14 @@ body {
   letter-spacing: 0.04em;
 }
 
-.detail-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; padding-bottom: 110px; }
+.detail-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; padding-bottom: 110px; }
 
 .detail-product-image {
   background: var(--warm-white);
   border: 1px solid var(--border-gold);
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
+  box-shadow: var(--shadow);
 }
 .detail-product-image img {
   display: block;
@@ -453,13 +556,54 @@ body {
   letter-spacing: 0.04em;
   border-top: 1px solid var(--border);
 }
+.detail-nav {
+  position: sticky;
+  top: 61px;
+  z-index: 8;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 0;
+  margin: -2px 0 2px;
+  background: linear-gradient(180deg, var(--cream) 72%, rgba(247,243,238,0));
+  scrollbar-width: none;
+}
+.detail-nav::-webkit-scrollbar { display: none; }
+.detail-nav-btn {
+  flex: 0 0 auto;
+  border: 1px solid var(--border-gold);
+  border-radius: 100px;
+  background: var(--warm-white);
+  color: var(--gold);
+  padding: 7px 11px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(26,23,20,0.04);
+}
+.detail-nav-btn:active {
+  background: var(--gold-pale);
+  transform: scale(0.96);
+}
+.detail-content-card {
+  background: var(--warm-white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(26,23,20,0.04);
+}
+.detail-content-card.primary {
+  border-color: var(--border-gold);
+}
+.detail-body > .detail-divider { display: none; }
 
 .detail-section-label {
   font-size: 10px;
   letter-spacing: 0.12em;
   color: var(--ink-muted);
   text-transform: uppercase;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .detail-section-text {
   font-size: 14px;
@@ -570,6 +714,10 @@ body {
   transition: transform .3s cubic-bezier(.4,0,.2,1);
 }
 .action-bar.visible { transform: translateY(0); }
+.action-bar.drawer-open {
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -8px 24px rgba(26,23,20,0.12);
+}
 .action-bar-inner {
   display: flex;
   align-items: center;
@@ -592,6 +740,79 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.selection-toggle-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border-gold);
+  background: var(--cream);
+  color: var(--gold);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .2s, background .2s;
+  flex-shrink: 0;
+}
+.action-bar.drawer-open .selection-toggle-btn { transform: rotate(180deg); }
+.selected-drawer {
+  display: none;
+  padding: 0 0 12px;
+  max-height: 34dvh;
+  overflow-y: auto;
+}
+.action-bar.drawer-open .selected-drawer {
+  display: block;
+  animation: softLift .24s ease both;
+}
+.selected-drawer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.selected-drawer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--cream);
+  border: 1px solid var(--border);
+}
+.selected-drawer-name {
+  min-width: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.selected-remove-btn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: var(--warm-white);
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.selected-drawer-actions {
+  display: flex;
+  gap: 8px;
+}
+.drawer-secondary-btn {
+  flex: 1;
+  border: 1px solid var(--border-gold);
+  background: transparent;
+  color: var(--gold);
+  border-radius: 10px;
+  padding: 10px;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
 .send-btn {
   flex-shrink: 0;
   background: var(--gold);
@@ -607,6 +828,27 @@ body {
   transition: background .2s, transform .15s;
 }
 .send-btn:active { transform: scale(0.96); background: var(--gold-light); }
+
+@keyframes softFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes softLift {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
 
 /* ── Empty state ── */
 .empty-state {
@@ -671,7 +913,9 @@ body {
     <h2>選擇想改善的關鍵字</h2>
     <p>用更直覺的方式找到適合療程</p>
   </div>
+  <div class="concern-selection" id="concern-selection"></div>
   <div class="concern-grid" id="concern-grid"></div>
+  <div class="concern-recommend" id="concern-recommend"></div>
 </div>
 
 <!-- View: By Type -->
@@ -706,7 +950,8 @@ body {
       <img id="detail-image" src="" alt="" loading="lazy">
       <div class="detail-image-caption" id="detail-image-caption" hidden></div>
     </div>
-    <div id="detail-license-block">
+    <div class="detail-nav" id="detail-nav"></div>
+    <div class="detail-content-card primary" id="detail-license-block">
       <div class="detail-section-label">儀器資訊</div>
       <div class="detail-license-grid">
         <div class="detail-license-item">
@@ -720,22 +965,22 @@ body {
       </div>
     </div>
     <div class="detail-divider"></div>
-    <div>
+    <div class="detail-content-card primary" id="detail-desc-card">
       <div class="detail-section-label" id="detail-desc-label">療程說明</div>
       <div class="detail-section-text" id="detail-desc"></div>
     </div>
     <div class="detail-divider"></div>
-    <div>
+    <div class="detail-content-card" id="detail-suitable-card">
       <div class="detail-section-label">適合族群</div>
       <div class="detail-section-text" id="detail-suitable"></div>
     </div>
     <div class="detail-divider"></div>
-    <div>
+    <div class="detail-content-card" id="detail-info-card">
       <div class="detail-section-label" id="detail-info-label">療程資訊</div>
       <div class="detail-info-grid" id="detail-info-grid"></div>
     </div>
     <div class="detail-divider"></div>
-    <div>
+    <div class="detail-content-card" id="detail-notes-card">
       <div class="detail-section-label">注意事項</div>
       <div class="detail-section-text" id="detail-notes"></div>
     </div>
@@ -750,11 +995,18 @@ body {
 
 <!-- Bottom action bar -->
 <div class="action-bar" id="action-bar">
+  <div class="selected-drawer" id="selected-drawer">
+    <div class="selected-drawer-list" id="selected-drawer-list"></div>
+    <div class="selected-drawer-actions">
+      <button class="drawer-secondary-btn" onclick="clearSelectedTreatments()">清空清單</button>
+    </div>
+  </div>
   <div class="action-bar-inner">
     <div class="selected-preview">
       <div class="selected-count-label" id="selected-count-label">已選擇</div>
       <div class="selected-names" id="selected-names"></div>
     </div>
+    <button class="selection-toggle-btn" id="selection-toggle-btn" onclick="toggleActionDrawer()" aria-label="展開諮詢清單">⌃</button>
     <button class="send-btn" onclick="sendToLine()">傳送諮詢</button>
   </div>
 </div>
@@ -1128,6 +1380,8 @@ let currentCatId = null;
 let currentSubcat = null;
 let currentDetailKey = null;
 let currentPanelCat = null;
+let selectedConcernKeywords = new Set();
+let isActionDrawerOpen = false;
 
 // ── Detail content map ──
 const DETAIL_MAP = {
@@ -1774,6 +2028,30 @@ function getDetailData(name) {
   };
 }
 
+function getTreatmentMedia(name) {
+  const detail = getDetailData(name);
+  return detail && detail.image ? {
+    image: detail.image,
+    alt: detail.imageAlt || `${name} 圖片`
+  } : null;
+}
+
+function escapeAttr(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function escapeText(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 // ── Init ──
 function init() {
   renderConcernGrid();
@@ -1789,13 +2067,82 @@ function renderConcernGrid() {
         ${group.keywords.map(keyword => {
           const count = getTreatmentsByKeyword(keyword).length;
           if (!count) return '';
-          return `<div class="keyword-chip" onclick="openKeyword('${keyword.replace(/'/g,"\\'")}')">
+          const active = selectedConcernKeywords.has(keyword);
+          return `<button class="keyword-chip ${active ? 'active' : ''}" onclick="toggleConcernKeyword('${escapeAttr(keyword)}')">
             <span>${keyword}</span><span class="keyword-count">${count}</span>
-          </div>`;
+          </button>`;
         }).join('')}
       </div>
     </div>
   `).join('');
+  renderConcernSelection();
+  renderConcernRecommendations();
+}
+
+function toggleConcernKeyword(keyword) {
+  if (selectedConcernKeywords.has(keyword)) {
+    selectedConcernKeywords.delete(keyword);
+  } else {
+    selectedConcernKeywords.add(keyword);
+  }
+  renderConcernGrid();
+}
+
+function clearConcernSelection() {
+  selectedConcernKeywords.clear();
+  renderConcernGrid();
+}
+
+function getConcernRecommendations() {
+  const keywords = Array.from(selectedConcernKeywords);
+  if (!keywords.length) return [];
+  return getAllTreatments()
+    .map(t => {
+      const matched = t.tags.filter(tag => selectedConcernKeywords.has(tag));
+      return { ...t, matched, score: matched.length };
+    })
+    .filter(t => t.score > 0)
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'zh-Hant'))
+    .slice(0, 12);
+}
+
+function renderConcernSelection() {
+  const box = document.getElementById('concern-selection');
+  const keywords = Array.from(selectedConcernKeywords);
+  if (!keywords.length) {
+    box.classList.remove('visible');
+    box.innerHTML = '';
+    return;
+  }
+  box.classList.add('visible');
+  box.innerHTML = `
+    <div class="concern-selection-head">
+      <div class="concern-selection-title">已選 ${keywords.length} 個關鍵字</div>
+      <button class="concern-clear-btn" onclick="clearConcernSelection()">清除</button>
+    </div>
+    <div class="concern-selected-tags">
+      ${keywords.map(keyword => `<span class="concern-selected-tag">${keyword}</span>`).join('')}
+    </div>`;
+}
+
+function renderConcernRecommendations() {
+  const box = document.getElementById('concern-recommend');
+  const recommendations = getConcernRecommendations();
+  if (!selectedConcernKeywords.size) {
+    box.classList.remove('visible');
+    box.innerHTML = '';
+    return;
+  }
+  box.classList.add('visible');
+  if (!recommendations.length) {
+    box.innerHTML = `<div class="concern-recommend-title">推薦項目</div><div class="concern-empty">目前沒有完全符合的項目，可減少關鍵字再試一次。</div>`;
+    return;
+  }
+  box.innerHTML = `
+    <div class="concern-recommend-title">推薦項目</div>
+    <div class="concern-recommend-list">
+      ${recommendations.map(t => renderTreatmentCard(t, { matchedTags: t.matched })).join('')}
+    </div>`;
 }
 
 function renderCategoryList() {
@@ -1978,35 +2325,68 @@ function renderTreatments(cat) {
     list.innerHTML = `<div class="empty-state">此分類暫無${isProductCategory(cat) ? '保養品' : '療程'}</div>`;
     return;
   }
-  list.innerHTML = items.map(t => {
-    const key = t.name;
-    const sel = selectedTreatments.has(key);
-    return `
-      <div class="treatment-card ${sel ? 'selected' : ''}" onclick="openDetail('${key.replace(/'/g,"\\'")}')">
-        <div class="treatment-card-body">
-          <div class="treatment-name">${t.name}</div>
-          <div class="treatment-device">${t.device}</div>
-          <div class="treatment-desc-short">${t.desc}</div>
-          <div class="treatment-tags">${t.tags.map(tg => `<span class="tag">${tg}</span>`).join('')}</div>
-        </div>
-        <div class="treatment-card-right">
-          <div class="card-detail-arrow">›</div>
-          <div class="card-select-btn" onclick="event.stopPropagation(); toggleFromCard('${key.replace(/'/g,"\\'")}', this.closest('.treatment-card'))">${sel ? '✓' : '+'}</div>
-        </div>
-      </div>`;
-  }).join('');
+  list.innerHTML = items.map(t => renderTreatmentCard(t)).join('');
+}
+
+function renderTreatmentCard(t, options = {}) {
+  const key = t.name;
+  const sel = selectedTreatments.has(key);
+  const media = getTreatmentMedia(key);
+  const matchedTags = options.matchedTags || [];
+  const tags = matchedTags.length ? matchedTags : t.tags;
+  return `
+    <div class="treatment-card ${sel ? 'selected' : ''} ${media ? 'has-image' : ''}" onclick="openDetail('${escapeAttr(key)}')">
+      ${media ? `<div class="treatment-card-media"><img src="${media.image}" alt="${escapeAttr(media.alt)}" loading="lazy"></div>` : ''}
+      <div class="treatment-card-body">
+        <div class="treatment-name">${escapeText(t.name)}</div>
+        <div class="treatment-device">${escapeText(t.device)}</div>
+        <div class="treatment-desc-short">${escapeText(t.desc)}</div>
+        <div class="treatment-tags">${tags.map(tg => `<span class="tag">${escapeText(tg)}</span>`).join('')}</div>
+      </div>
+      <div class="treatment-card-right">
+        <div class="card-detail-arrow">›</div>
+        <div class="card-select-btn" onclick="event.stopPropagation(); toggleFromCard('${escapeAttr(key)}', this.closest('.treatment-card'))">${sel ? '✓' : '+'}</div>
+      </div>
+    </div>`;
+}
+
+function renderDetailNav(isProduct, showLicense) {
+  const nav = document.getElementById('detail-nav');
+  const items = [
+    showLicense ? { label: '核准資訊', target: 'detail-license-block' } : null,
+    { label: isProduct ? '產品說明' : '療程說明', target: 'detail-desc-card' },
+    { label: '適合族群', target: 'detail-suitable-card' },
+    { label: isProduct ? '產品資訊' : '療程資訊', target: 'detail-info-card' },
+    { label: '注意事項', target: 'detail-notes-card' }
+  ].filter(Boolean);
+  nav.innerHTML = items.map(item =>
+    `<button class="detail-nav-btn" onclick="scrollDetailTo('${item.target}')">${item.label}</button>`
+  ).join('');
+}
+
+function scrollDetailTo(targetId) {
+  const panel = document.getElementById('detail-panel');
+  const target = document.getElementById(targetId);
+  if (!panel || !target) return;
+  const top = target.offsetTop - 104;
+  panel.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 
 function toggleFromCard(name, cardEl) {
   if (selectedTreatments.has(name)) {
     selectedTreatments.delete(name);
-    cardEl.classList.remove('selected');
-    cardEl.querySelector('.card-select-btn').textContent = '+';
+    if (cardEl) {
+      cardEl.classList.remove('selected');
+      cardEl.querySelector('.card-select-btn').textContent = '+';
+    }
   } else {
     selectedTreatments.add(name);
-    cardEl.classList.add('selected');
-    cardEl.querySelector('.card-select-btn').textContent = '✓';
+    if (cardEl) {
+      cardEl.classList.add('selected');
+      cardEl.querySelector('.card-select-btn').textContent = '✓';
+    }
   }
+  renderConcernRecommendations();
   updateActionBar();
 }
 
@@ -2056,9 +2436,11 @@ function openDetail(name) {
     .replace(/\n/g, '<br>');
   const licenseBlock = document.getElementById('detail-license-block');
   const licenseDiv = licenseBlock.nextElementSibling; // the divider after license block
-  const isBlankLicenseText = text => !text || text === '—' || text.includes('請填入') || text.includes('非醫療器材') || text.includes('不適用');
+  const isBlankLicenseText = text => !text || text === '—' || text.includes('請填入') || text.includes('非醫療器材') || text.includes('不適用') || text.includes('衛部粧');
   const hasLicenseName = !isBlankLicenseText(detail.licenseName);
   const hasLicenseNo = !isBlankLicenseText(detail.licenseNo);
+  const showLicense = hasLicenseName || hasLicenseNo;
+  renderDetailNav(isProduct, showLicense);
   if (!hasLicenseName && !hasLicenseNo) {
     licenseBlock.style.display = 'none';
     licenseDiv.style.display = 'none';
@@ -2086,8 +2468,11 @@ function openDetail(name) {
   addBtn.textContent = isSel ? '✓ 已加入清單' : '加入諮詢清單';
   addBtn.classList.toggle('added', isSel);
 
-  document.getElementById('detail-panel').classList.add('open');
+  const detailPanel = document.getElementById('detail-panel');
+  detailPanel.scrollTop = 0;
+  detailPanel.classList.add('open');
   document.getElementById('detail-action-bar').classList.add('visible');
+  requestAnimationFrame(() => { detailPanel.scrollTop = 0; });
 }
 
 function closeDetail() {
@@ -2112,6 +2497,7 @@ function toggleFromDetail() {
   // Sync card in list
   const cat = currentPanelCat || DATA.categories.find(c => c.id === currentCatId);
   if (cat) renderTreatments(cat);
+  renderConcernRecommendations();
   updateActionBar();
 }
 
@@ -2136,14 +2522,46 @@ function updateActionBar() {
   const count = selectedTreatments.size;
   if (count === 0) {
     bar.classList.remove('visible');
+    bar.classList.remove('drawer-open');
+    isActionDrawerOpen = false;
     return;
   }
   bar.classList.add('visible');
+  bar.classList.toggle('drawer-open', isActionDrawerOpen);
   const names = Array.from(selectedTreatments);
   const kind = getSelectionKind(names);
   const unit = kind === '項目' ? '項目' : `項${kind}`;
   document.getElementById('selected-count-label').textContent = `已選擇 ${count} ${unit}`;
   document.getElementById('selected-names').textContent = names.join('、');
+  document.getElementById('selected-drawer-list').innerHTML = names.map(name => `
+    <div class="selected-drawer-item">
+      <div class="selected-drawer-name">${escapeText(name)}</div>
+      <button class="selected-remove-btn" onclick="removeSelectedTreatment('${escapeAttr(name)}')" aria-label="移除 ${escapeAttr(name)}">×</button>
+    </div>
+  `).join('');
+  document.getElementById('selection-toggle-btn').setAttribute('aria-label', isActionDrawerOpen ? '收合諮詢清單' : '展開諮詢清單');
+}
+
+function toggleActionDrawer() {
+  if (!selectedTreatments.size) return;
+  isActionDrawerOpen = !isActionDrawerOpen;
+  updateActionBar();
+}
+
+function removeSelectedTreatment(name) {
+  selectedTreatments.delete(name);
+  const cat = currentPanelCat || DATA.categories.find(c => c.id === currentCatId);
+  if (cat) renderTreatments(cat);
+  renderConcernRecommendations();
+  updateActionBar();
+}
+
+function clearSelectedTreatments() {
+  selectedTreatments.clear();
+  const cat = currentPanelCat || DATA.categories.find(c => c.id === currentCatId);
+  if (cat) renderTreatments(cat);
+  renderConcernRecommendations();
+  updateActionBar();
 }
 
 // ── Tab switch ──
