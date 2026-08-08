@@ -887,6 +887,926 @@ body {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* ── Aesop-inspired visual refresh ── */
+:root {
+  --cream: #e7e0d4;
+  --warm-white: #f5f1e9;
+  --paper: #eee8dd;
+  --ink: #25221d;
+  --ink-soft: #403b33;
+  --ink-muted: #766f63;
+  --gold: #9b7a4d;
+  --gold-light: #b59b72;
+  --gold-pale: #ded3bf;
+  --rose: #a7836f;
+  --teal: #5f6c59;
+  --border: rgba(37, 34, 29, .13);
+  --border-gold: rgba(155, 122, 77, .26);
+  --shadow: 0 18px 42px rgba(45, 39, 31, .11);
+  --radius: 10px;
+}
+
+body {
+  background:
+    radial-gradient(circle at 22% -10%, rgba(255,255,255,.34), transparent 30%),
+    linear-gradient(180deg, #ece5d9 0%, #dfd7ca 100%);
+}
+
+.header,
+.tab-bar,
+.panel-header,
+.detail-action-bar,
+.action-bar {
+  background: rgba(245, 241, 233, .94);
+  backdrop-filter: blur(18px);
+}
+
+.header {
+  padding: 16px 20px 14px;
+  border-bottom-color: rgba(37, 34, 29, .12);
+}
+
+.header-title {
+  font-size: 14px;
+  letter-spacing: .12em;
+  color: var(--ink);
+}
+
+.header-logo-dot {
+  background: var(--teal);
+}
+
+.tab-bar {
+  padding: 0 18px;
+  gap: 26px;
+}
+
+.tab-btn {
+  flex: 0 0 auto;
+  padding: 13px 0 12px;
+  font-size: 12px;
+  color: var(--ink-muted);
+  border-bottom-width: 1px;
+}
+
+.tab-btn.active {
+  color: var(--ink);
+  border-bottom-color: var(--gold);
+}
+
+.category-list {
+  padding: 14px 14px 120px;
+  gap: 10px;
+}
+
+.category-item {
+  min-height: 136px;
+  padding: 0;
+  border: 1px solid rgba(37, 34, 29, .11);
+  border-radius: 8px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(132px, 38%) 1fr 28px;
+  align-items: stretch;
+  background: var(--warm-white);
+  box-shadow: 0 1px 0 rgba(255,255,255,.42) inset;
+}
+
+.category-item:hover {
+  border-color: rgba(95, 108, 89, .34);
+  box-shadow: var(--shadow);
+}
+
+.cat-left {
+  display: contents;
+}
+
+.cat-icon {
+  display: none;
+}
+
+.cat-media {
+  position: relative;
+  min-height: 136px;
+  background: var(--gold-pale);
+  overflow: hidden;
+}
+
+.cat-media img {
+  width: 100%;
+  height: 100%;
+  min-height: 136px;
+  object-fit: cover;
+  display: block;
+  filter: saturate(.8) contrast(.98);
+}
+
+.cat-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(37,34,29,.08), rgba(245,241,233,.02));
+}
+
+.cat-meta {
+  padding: 18px 10px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.cat-kicker {
+  width: fit-content;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--gold);
+  color: var(--gold);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.cat-name {
+  font-size: 19px;
+  line-height: 1.4;
+  letter-spacing: .07em;
+  color: var(--ink);
+}
+
+.cat-count {
+  margin-top: 8px;
+  color: var(--ink-muted);
+  font-size: 11px;
+  line-height: 1.55;
+  letter-spacing: .04em;
+}
+
+.cat-arrow {
+  align-self: center;
+  justify-self: center;
+  color: var(--gold);
+  font-size: 20px;
+}
+
+.panel {
+  background: linear-gradient(180deg, #e7e0d4 0%, #f2ede4 100%);
+}
+
+.panel-header {
+  min-height: 62px;
+  border-bottom-color: rgba(37, 34, 29, .12);
+}
+
+.back-btn {
+  border-radius: 999px;
+  border-color: rgba(37, 34, 29, .12);
+  background: rgba(245,241,233,.7);
+}
+
+.panel-title {
+  color: var(--ink);
+  letter-spacing: .08em;
+}
+
+.subcategory-wrap {
+  padding: 14px 14px 8px;
+}
+
+.subcategory-label {
+  color: var(--ink-muted);
+  letter-spacing: .14em;
+}
+
+.chip {
+  border-radius: 999px;
+  border-color: rgba(37, 34, 29, .12);
+  background: rgba(245, 241, 233, .78);
+  color: var(--ink-soft);
+}
+
+.chip.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--warm-white);
+}
+
+.panel-tools {
+  padding: 0 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.search-box {
+  height: 44px;
+  border: 1px solid rgba(37, 34, 29, .13);
+  background: rgba(245, 241, 233, .82);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.4) inset;
+}
+
+.search-icon {
+  color: var(--gold);
+  font-size: 17px;
+  line-height: 1;
+}
+
+.search-input {
+  min-width: 0;
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  letter-spacing: .04em;
+}
+
+.search-input::placeholder {
+  color: rgba(118, 111, 99, .72);
+}
+
+.result-count {
+  min-height: 16px;
+  padding-left: 6px;
+  color: var(--ink-muted);
+  font-size: 11px;
+  letter-spacing: .05em;
+}
+
+.section-divider {
+  background: rgba(155, 122, 77, .22);
+}
+
+.treatment-list,
+.concern-recommend-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.treatment-list {
+  padding: 10px 14px 128px;
+}
+
+.concern-recommend {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.treatment-card,
+.treatment-card.has-image {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0;
+  border-width: 1px;
+  border-radius: 8px;
+  background: var(--warm-white);
+  min-width: 0;
+  box-shadow: 0 1px 0 rgba(255,255,255,.38) inset;
+}
+
+.treatment-card:hover {
+  border-color: rgba(95, 108, 89, .34);
+}
+
+.treatment-card.selected {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 1px rgba(95,108,89,.48), var(--shadow);
+}
+
+.treatment-card-media {
+  width: 100%;
+  min-height: auto;
+  aspect-ratio: 4 / 3;
+  border: none;
+  border-radius: 0;
+  background: var(--gold-pale);
+}
+
+.treatment-card-media img {
+  height: 100%;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  filter: saturate(.86) contrast(.98);
+}
+
+.treatment-card-body,
+.treatment-card.has-image .treatment-card-body {
+  padding: 11px 10px 12px;
+}
+
+.treatment-name {
+  font-size: 15px;
+  line-height: 1.45;
+  letter-spacing: .04em;
+  margin-bottom: 5px;
+}
+
+.treatment-device {
+  color: var(--gold);
+  font-size: 10px;
+  line-height: 1.45;
+  margin-bottom: 7px;
+}
+
+.treatment-desc-short {
+  font-size: 11px;
+  line-height: 1.65;
+  -webkit-line-clamp: 3;
+}
+
+.treatment-tags {
+  gap: 4px;
+  margin-top: 9px;
+}
+
+.tag,
+.detail-tag {
+  background: rgba(222, 211, 191, .72);
+  color: #836842;
+  border: 1px solid rgba(155,122,77,.12);
+}
+
+.treatment-card-right {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  flex-direction: row;
+  z-index: 2;
+}
+
+.card-detail-arrow {
+  display: none;
+}
+
+.card-select-btn {
+  width: 30px;
+  height: 30px;
+  background: rgba(245, 241, 233, .88);
+  border-color: rgba(37,34,29,.14);
+  color: var(--ink);
+  box-shadow: 0 4px 16px rgba(37,34,29,.12);
+}
+
+.treatment-card.selected .card-select-btn {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: var(--warm-white);
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  padding: 28px 12px;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+.detail-panel {
+  background: #f1ebe2;
+}
+
+.detail-hero {
+  padding: 18px 18px 20px;
+  border-bottom-color: rgba(37,34,29,.12);
+  background: var(--warm-white);
+}
+
+.detail-device-badge {
+  border-color: rgba(155,122,77,.34);
+  color: var(--gold);
+}
+
+.detail-title {
+  font-size: 25px;
+  letter-spacing: .07em;
+  color: var(--ink);
+}
+
+.detail-body {
+  padding: 0 0 128px;
+  gap: 0;
+}
+
+.detail-product-image {
+  order: -2;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--paper);
+}
+
+.detail-product-image img {
+  aspect-ratio: 4 / 3;
+  filter: saturate(.88) contrast(.98);
+}
+
+.detail-nav {
+  top: 61px;
+  padding: 10px 14px;
+  margin: 0;
+  background: rgba(241, 235, 226, .92);
+  backdrop-filter: blur(12px);
+}
+
+.detail-nav-btn {
+  border-radius: 999px;
+  border-color: rgba(37,34,29,.13);
+  background: rgba(245,241,233,.92);
+  color: var(--ink-soft);
+  box-shadow: none;
+}
+
+.detail-content-card {
+  margin: 0 14px;
+  padding: 18px 0;
+  border: none;
+  border-radius: 0;
+  border-top: 1px solid rgba(37,34,29,.12);
+  background: transparent;
+  box-shadow: none;
+}
+
+.detail-content-card.primary {
+  border-color: rgba(37,34,29,.12);
+}
+
+.detail-section-label {
+  color: var(--gold);
+  font-size: 11px;
+  letter-spacing: .16em;
+}
+
+.detail-section-text {
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.detail-info-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.detail-info-item,
+.detail-license-item {
+  border-radius: 8px;
+  border-color: rgba(37,34,29,.1);
+  background: rgba(245,241,233,.74);
+}
+
+.detail-add-btn,
+.detail-consult-btn,
+.send-btn,
+.drawer-secondary-btn {
+  border-radius: 7px;
+}
+
+.detail-add-btn {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.detail-consult-btn,
+.send-btn {
+  background: var(--teal);
+}
+
+.detail-consult-btn:active,
+.send-btn:active {
+  background: #4d5949;
+}
+
+@media (min-width: 720px) {
+  .category-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .category-item {
+    grid-template-columns: minmax(152px, 42%) 1fr 28px;
+  }
+
+  .treatment-list,
+  .concern-recommend-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .category-item {
+    grid-template-columns: 118px 1fr 22px;
+  }
+
+  .cat-name {
+    font-size: 17px;
+  }
+
+  .treatment-list,
+  .concern-recommend-list {
+    gap: 8px;
+  }
+
+  .treatment-card-body,
+  .treatment-card.has-image .treatment-card-body {
+    padding: 10px 8px 11px;
+  }
+}
+
+/* ── Mockup-matched mobile layout ── */
+.header {
+  position: sticky;
+  min-height: 52px;
+  justify-content: center;
+  padding: 14px 48px 12px;
+}
+
+.header-title {
+  width: 100%;
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-logo-dot {
+  display: none;
+}
+
+.header-actions {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: .04em;
+}
+
+.tab-bar {
+  justify-content: center;
+  gap: 56px;
+  padding: 0 18px;
+}
+
+.tab-btn {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  letter-spacing: .06em;
+}
+
+.category-list {
+  padding: 12px 14px 112px;
+  gap: 9px;
+}
+
+.category-item {
+  min-height: 118px;
+  display: block;
+  position: relative;
+  border: none;
+  border-radius: 4px;
+  background: #d9cec0;
+  box-shadow: none;
+}
+
+.category-item:active {
+  transform: scale(.992);
+}
+
+.cat-left {
+  display: block;
+  height: 100%;
+}
+
+.cat-media {
+  position: absolute;
+  inset: 0;
+  min-height: 118px;
+}
+
+.cat-media img {
+  min-height: 118px;
+  filter: saturate(.82) contrast(.98) brightness(.98);
+}
+
+.cat-media::after {
+  background:
+    linear-gradient(90deg, rgba(244,239,230,.68) 0%, rgba(244,239,230,.36) 36%, rgba(244,239,230,.04) 72%),
+    linear-gradient(0deg, rgba(52,45,37,.035), rgba(52,45,37,.035));
+}
+
+.cat-meta {
+  position: relative;
+  z-index: 1;
+  height: 118px;
+  justify-content: center;
+  padding: 18px 70px 18px 20px;
+}
+
+.cat-kicker,
+.cat-count {
+  display: none;
+}
+
+.cat-name {
+  font-size: 24px;
+  letter-spacing: .06em;
+  color: #241f19;
+}
+
+.cat-name::after {
+  content: none;
+  display: none;
+}
+
+.cat-arrow {
+  display: none;
+}
+
+.panel-header {
+  min-height: 52px;
+  justify-content: center;
+  padding: 10px 54px;
+}
+
+.panel-header .back-btn {
+  position: absolute;
+  left: 13px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  font-size: 22px;
+}
+
+.panel-title {
+  width: 100%;
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-tools {
+  padding-top: 4px;
+}
+
+.search-box {
+  height: 38px;
+  border-radius: 5px;
+  background: rgba(245,241,233,.78);
+}
+
+.treatment-list,
+.concern-recommend-list {
+  gap: 8px;
+}
+
+.treatment-list {
+  padding: 8px 12px 104px;
+}
+
+.treatment-card,
+.treatment-card.has-image {
+  border-radius: 5px;
+  border-color: rgba(37,34,29,.1);
+  background: #fbf7ef;
+}
+
+.treatment-card-media {
+  aspect-ratio: 1 / 1;
+  background: #ddd3c6;
+}
+
+.treatment-card-media img {
+  aspect-ratio: 1 / 1;
+}
+
+.treatment-card-body,
+.treatment-card.has-image .treatment-card-body {
+  padding: 10px 9px 9px;
+}
+
+.treatment-name {
+  font-size: 15px;
+  line-height: 1.45;
+  letter-spacing: .03em;
+}
+
+.treatment-device,
+.treatment-desc-short {
+  display: none;
+}
+
+.treatment-tags {
+  margin-top: 8px;
+  gap: 5px;
+}
+
+.tag,
+.detail-tag {
+  border-radius: 4px;
+  background: rgba(250,247,239,.72);
+  color: #6f6250;
+  border-color: rgba(37,34,29,.12);
+  font-size: 10px;
+  padding: 4px 7px;
+}
+
+.card-select-btn {
+  display: none;
+}
+
+.detail-panel .panel-header {
+  position: sticky;
+}
+
+.detail-product-image img {
+  aspect-ratio: 4 / 3 !important;
+}
+
+.detail-hero {
+  padding: 26px 22px 18px;
+  background: #fbf8f1;
+  border-bottom: none;
+}
+
+.detail-device-badge {
+  display: none;
+}
+
+.detail-title {
+  font-size: 30px;
+  letter-spacing: .04em;
+  margin-bottom: 12px;
+}
+
+.detail-tags {
+  gap: 7px;
+}
+
+.detail-nav {
+  display: none;
+}
+
+.detail-body {
+  background: #fbf8f1;
+  padding-bottom: 104px;
+}
+
+.detail-content-card {
+  margin: 0 22px;
+  padding: 0;
+  border-top: 1px solid rgba(155,122,77,.42);
+}
+
+.detail-content-card:last-child {
+  border-bottom: 1px solid rgba(155,122,77,.22);
+}
+
+.detail-section-label {
+  margin: 0;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  letter-spacing: .08em;
+  color: #322b22;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.detail-section-label::after {
+  content: "+";
+  color: var(--gold);
+  font-family: var(--font-sans);
+  font-size: 24px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.detail-content-card.open .detail-section-label::after {
+  content: "−";
+}
+
+.detail-section-text,
+.detail-info-grid,
+.detail-license-grid {
+  display: none;
+  padding: 0 0 20px;
+}
+
+.detail-content-card.open .detail-section-text,
+.detail-content-card.open .detail-info-grid,
+.detail-content-card.open .detail-license-grid {
+  display: block;
+}
+
+.detail-content-card.open .detail-info-grid {
+  display: grid;
+}
+
+.detail-content-card.open .detail-license-grid {
+  display: flex;
+}
+
+.detail-license-item,
+.detail-info-item {
+  background: transparent;
+  border-radius: 0;
+}
+
+.action-bar {
+  padding: 10px 14px max(12px, env(safe-area-inset-bottom));
+}
+
+.action-bar-inner,
+.detail-action-inner {
+  gap: 7px;
+}
+
+.selected-preview,
+.detail-add-btn {
+  flex: 1;
+  min-height: 46px;
+  border: 1px solid var(--gold);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(251,248,241,.92);
+  color: var(--gold);
+  font-family: var(--font-serif);
+  cursor: pointer;
+}
+
+.selected-count-label {
+  margin: 0;
+  color: var(--gold);
+  font-size: 14px;
+  letter-spacing: .08em;
+}
+
+.selected-names {
+  display: none;
+}
+
+.selection-toggle-btn {
+  display: none;
+}
+
+.send-btn,
+.detail-consult-btn {
+  flex: 1;
+  min-height: 46px;
+  border-radius: 5px;
+  background: #687160;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  letter-spacing: .08em;
+}
+
+.selected-drawer {
+  padding-bottom: 10px;
+}
+
+@media (min-width: 720px) {
+  .category-list {
+    display: flex;
+    flex-direction: column;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .treatment-list,
+  .concern-recommend-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 520px;
+    margin: 0 auto;
+  }
+}
 </style>
 </head>
 <body>
@@ -898,7 +1818,10 @@ body {
   <div class="header-title">
     <span class="header-logo-dot"></span>艾絲柏美學診所 彰化員林
   </div>
-  <div style="font-size:11px;color:var(--ink-muted);letter-spacing:0.06em;">療程介紹</div>
+  <div class="header-actions" aria-hidden="true">
+    <span>⋯</span>
+    <span>×</span>
+  </div>
 </div>
 
 <!-- Tab bar -->
@@ -930,6 +1853,13 @@ body {
     <div class="panel-title" id="panel-title">療程</div>
   </div>
   <div class="subcategory-wrap" id="subcategory-wrap"></div>
+  <div class="panel-tools">
+    <label class="search-box" for="treatment-search">
+      <span class="search-icon">⌕</span>
+      <input id="treatment-search" class="search-input" type="search" placeholder="搜尋療程或困擾" oninput="handleTreatmentSearch(this.value)">
+    </label>
+    <div class="result-count" id="result-count"></div>
+  </div>
   <div class="section-divider"></div>
   <div class="treatment-list" id="treatment-list"></div>
 </div>
@@ -940,16 +1870,16 @@ body {
     <div class="back-btn" onclick="closeDetail()">←</div>
     <div class="panel-title" id="detail-panel-title">療程詳情</div>
   </div>
+  <div class="detail-product-image" id="detail-image-block" hidden>
+    <img id="detail-image" src="" alt="" loading="lazy">
+    <div class="detail-image-caption" id="detail-image-caption" hidden></div>
+  </div>
   <div class="detail-hero">
     <div class="detail-device-badge" id="detail-device"></div>
     <div class="detail-title" id="detail-title"></div>
     <div class="detail-tags" id="detail-tags"></div>
   </div>
   <div class="detail-body">
-    <div class="detail-product-image" id="detail-image-block" hidden>
-      <img id="detail-image" src="" alt="" loading="lazy">
-      <div class="detail-image-caption" id="detail-image-caption" hidden></div>
-    </div>
     <div class="detail-nav" id="detail-nav"></div>
     <div class="detail-content-card primary" id="detail-license-block">
       <div class="detail-section-label">儀器資訊</div>
@@ -1002,12 +1932,12 @@ body {
     </div>
   </div>
   <div class="action-bar-inner">
-    <div class="selected-preview">
+    <div class="selected-preview" onclick="toggleActionDrawer()">
       <div class="selected-count-label" id="selected-count-label">已選擇</div>
       <div class="selected-names" id="selected-names"></div>
     </div>
     <button class="selection-toggle-btn" id="selection-toggle-btn" onclick="toggleActionDrawer()" aria-label="展開諮詢清單">⌃</button>
-    <button class="send-btn" onclick="sendToLine()">傳送諮詢</button>
+    <button class="send-btn" onclick="sendToLine()">立即傳送諮詢</button>
   </div>
 </div>
 
@@ -1056,6 +1986,18 @@ const DATA = {
       concern: "點滴、靜脈雷射、血液淨化",
       subcategories: [
         {
+          name: "靜脈雷射",
+          treatments: [
+            { name: "OLIB靜脈雷射", device: "OLIB靜脈雷射", desc: "雷射能量透過血管照射，改善血液循環、提升免疫及抗老化。", tags: ["循環", "免疫", "抗老", "代謝", "疲勞", "保養"] }
+          ]
+        },
+        {
+          name: "血液淨化",
+          treatments: [
+            { name: "MCS+血液淨化", device: "血液淨化療程", desc: "透過專業醫療技術清除血液中的代謝廢物、毒素與多餘物質，改善血液品質，促進全身循環與細胞代謝，提升整體健康狀態。", tags: ["血液淨化", "排毒", "循環", "代謝", "慢性疲勞", "全身保養"] }
+          ]
+        },
+        {
           name: "點滴",
           treatments: [
             { name: "美白點滴", device: "靜脈注射", desc: "高劑量維他命 C 及傳明酸，由內而外抑制黑色素，改善暗沉。", tags: ["美白", "暗沉", "提亮", "抗氧化", "疲勞", "氣色"] },
@@ -1068,18 +2010,6 @@ const DATA = {
             { name: "頂級貴婦點滴", device: "靜脈注射", desc: "精選複合式高端營養成分，全方位補充抗老化、美膚、提升活力所需關鍵素材，適合追求全面保養的族群。", tags: ["抗老", "美膚", "活力", "疲勞", "氣色", "全方位保養"] },
             { name: "術後止痛修復", device: "靜脈注射", desc: "術後專屬配方，快速補充修復所需營養素，減緩術後腫脹與不適，加速傷口癒合與身體恢復。", tags: ["術後疼痛", "消腫", "修復", "傷口癒合", "不適感", "恢復期"] },
             { name: "止痛針", device: "靜脈注射", desc: "針對急性疼痛或手術後疼痛給予即時緩解，由醫師評估後施打，快速發揮止痛效果。", tags: ["急性疼痛", "術後疼痛", "止痛", "不適感", "即時緩解", "醫師評估"] }
-          ]
-        },
-        {
-          name: "靜脈雷射",
-          treatments: [
-            { name: "OLIB靜脈雷射", device: "OLIB靜脈雷射", desc: "雷射能量透過血管照射，改善血液循環、提升免疫及抗老化。", tags: ["循環", "免疫", "抗老", "代謝", "疲勞", "保養"] }
-          ]
-        },
-        {
-          name: "血液淨化",
-          treatments: [
-            { name: "MCS+血液淨化", device: "血液淨化療程", desc: "透過專業醫療技術清除血液中的代謝廢物、毒素與多餘物質，改善血液品質，促進全身循環與細胞代謝，提升整體健康狀態。", tags: ["血液淨化", "排毒", "循環", "代謝", "慢性疲勞", "全身保養"] }
           ]
         }
       ]
@@ -1376,6 +2306,7 @@ let currentDetailKey = null;
 let currentPanelCat = null;
 let selectedConcernKeywords = new Set();
 let isActionDrawerOpen = false;
+let treatmentSearchQuery = "";
 
 // ── Detail content map ──
 const DETAIL_MAP = {
@@ -1550,6 +2481,10 @@ const DETAIL_MAP = {
   "Derma Pen 得美微針筆": {
     licenseName: "『伊酷美』得美微針筆 / 'Equipmed' DermapenWorld Dermapen 4",
     licenseNo: "衛部醫器輸字第036843號",
+    image: "assets/images/dermapen.webp",
+    imageAlt: "Derma Pen 得美微針筆 真實產品圖片",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "得美微針筆（Dermapen 4）是全球最新一代醫療級電動微針儀器，採用 16 支超細鍍鈦合金針頭，以每分鐘高達 1,920 次的高速垂直微穿刺，在肌膚表面製造出大量微型通道，精準作用於真皮層，啟動皮膚自然癒合機制，大量刺激膠原蛋白與彈性蛋白的新生，達到肌膚重塑與修復的效果。\n\n相較於傳統滾輪微針，Dermapen 4 採用垂直穿刺設計，避免水平拉扯對肌膚造成的二次傷害，治療更精準、舒適度更高，術後復原也更快速。針頭深度可依部位與膚況由醫師精細調控（0.2 mm 至 3.0 mm），確保能量精準落在目標層次，達到最佳療效。\n\n療程適用範圍廣泛，舉凡痘疤凹洞、毛孔粗大、膚質粗糙、細紋初現，乃至整體肌膚緊緻提升，均有顯著改善效果。每次治療後，皮膚的吸收力大幅提升，此時搭配高濃度修復精華導入（如生長因子、玻尿酸、外泌體），能讓有效成分深入真皮，事半功倍。建議療程 4 至 6 次為一個完整週期，每次間隔 3 至 4 週，療程結束後可依膚況安排定期維持保養。\n\n── 原廠導入精華 MG-Collection ──\n\n▍MG-R.A.S.（逆齡修復精華）\nMG-R.A.S. 全名 Reverse Ageing & Scars，專為抗老化與疤痕修復而設計。核心成分為 Retinaldehyde（維生素 A 最具活性的非處方形式），能有效調節細胞更新週期、刺激膠原新生，搭配維生素 E、積雪草萃取（Centella Asiatica）及銅胜肽（Copper Peptides）等強效抗氧化與修復成分，協同改善肌膚老化徵兆。此配方可顯著淡化色素不均、細紋、皺紋及疤痕造成的凹凸紋理，適合有抗老需求、痘疤修復或整體膚質提升需求的族群。療程中透過微針通道導入，成分直達真皮層，吸收率大幅提升，效果加倍。\n\n▍MG-BL（亮白均色精華）\nMG-BL 針對各類色素問題而設計，含有天然美白成分與酪氨酸酶抑制劑（Tyrosinase Inhibitors），從根源抑制黑色素生成，同時搭配 HylaFuse® 玻尿酸傳輸技術，在提亮膚色的同時深層補水，讓肌膚呈現均勻透亮的光澤感。適合改善曬斑、老人斑、日曬黑化、黃褐斑（肝斑）及疤痕後色素沉澱等問題。透過微針開啟的通道精準導入，讓活性成分繞過角質層屏障，直達黑色素聚集的真皮層，達到由內而外的均色效果。\n\n▍MG-CLR（淨痘控油精華）\nMG-CLR 專為問題性肌膚設計，含有抗菌胜肽（Antimicrobial Peptides）、Niacinamide（菸鹼醯胺）、乳香萃取（Boswellia Serrata Extract）及生物相容性植物萃取，具有抗菌、消炎、調節皮脂分泌的多重效果。能有效舒緩發炎性痘痘、改善黑白頭粉刺、縮小毛孔，並刺激膠原蛋白生成以改善細紋與膚質不均。適合油性膚質、長期受痘痘與粉刺困擾、毛孔粗大者。微針導入讓成分直達皮脂腺周圍，針對問題根源精準作用，兼顧修復與預防。",
     suitable: "痘疤凹洞、毛孔粗大、細紋初現者；肌膚需要整體提質者。",
     info: [{ k: "療程時間", v: "約 45 分鐘" }, { k: "恢復期", v: "1–3 天輕微泛紅" }, { k: "建議次數", v: "4–6 次為一療程" }, { k: "間隔時間", v: "每次間隔 3–4 週" }],
@@ -1558,6 +2493,10 @@ const DETAIL_MAP = {
   "Dermashine Pro 德瑪莎": {
     licenseName: "“秀恩美締德瑪莎” 注射系統及其組件 / “Huons Meditech” DermaShine PRO and accessories",
     licenseNo: "衛部醫器輸字第036380號",
+    image: "assets/images/dermashine-pro.webp",
+    imageAlt: "Dermashine Pro 德瑪莎 真實產品圖片",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "Dermashine Pro 德瑪莎是多針負壓水光注射系統，透過穩定負壓吸附與多點注射，將玻尿酸或醫師規劃的合適製劑均勻導入臉部皮膚淺層皮下。相較手工單點注射，儀器能協助控制注射深度、注射量與分布密度，使補水、提亮與膚質改善更均勻。\n\n▍療程特色\n德瑪莎適合乾燥缺水、細紋、暗沉、膚質粗糙與妝感不服貼族群。透過淺層補水與微量多點導入，可改善肌膚含水度與光澤感，讓膚況看起來更細緻水嫩。醫師會依膚況評估導入成分、劑量、治療深度與施打範圍。\n\n▍療程規劃\n治療前會清潔、敷麻並進行膚況評估，療程約 30 至 60 分鐘。術後常見短暫針點、泛紅、微腫或瘀青，通常數日內逐漸改善。建議可依膚況安排 3 至 4 週一次的保養型療程，完整次數需由醫師評估。",
     suitable: "乾燥缺水、細紋、暗沉、膚質粗糙、妝感不服貼，或希望提升水嫩光澤者。",
     info: [{ k: "療程時間", v: "約 30–60 分鐘" }, { k: "恢復期", v: "針點泛紅約 1–3 天" }, { k: "建議次數", v: "依膚況規劃" }, { k: "治療重點", v: "補水、提亮、膚質改善" }],
@@ -1590,6 +2529,10 @@ const DETAIL_MAP = {
   "HydraFacial 海菲秀": {
     licenseName: "『愛奇』海菲秀系統(未滅菌)",
     licenseNo: "衛署醫器輸字第019502號",
+    image: "assets/images/hydrafacial.webp",
+    imageAlt: "HydraFacial 海菲秀產品圖",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "HydraFacial 海菲秀來自美國，擁有逾 60 項專利認證，同時通過美國 FDA 及台灣衛福部核准，是全球頂級的非侵入式醫療級肌膚管理療程。有別於傳統果酸換膚或磨皮療程，海菲秀採用獨家專利 HydroPeel® 渦漩注入技術，透過螺旋設計探頭搭配真空負壓吸力，在同一動作中同時完成清潔、去除角質、吸出粉刺，並即時注入保濕精華，讓肌膚在整潔的狀態下獲得充分滋養，術後即刻呈現光澤感與細緻度提升。\n\n▍三步驟療程流程\n\n第一步（藍色端頭）：搭配乳酸、海藻萃取及葡萄糖胺精華，溫和軟化皮脂，深層去除老廢角質，促進肌膚代謝更新，使肌膚煥發活力。\n\n第二步（淺藍端頭）：搭配水楊酸、蜂蜜萃取及白睡蓮萃取精華，深度清潔毛孔、溶解黑白頭粉刺，以渦旋負壓技術將毛孔內堆積的髒污與皮脂徹底帶出，肌膚即刻透亮清爽。\n\n第三步（透明端頭）：搭配小分子玻尿酸、維生素 A、維生素 E、白茶萃取及迷迭香萃取等多重抗氧化修護精華，透過渦旋導入技術深層補水，強化肌膚保濕屏障，提升抗氧化防護力，令肌膚持久水潤飽滿。\n\n▍適用範圍與療程特色\n臨床文獻證實，海菲秀可有效改善毛孔粗大、細紋、色素沉澱，並增加纖維母細胞密度（纖維母細胞為合成膠原蛋白的關鍵細胞），全面提升肌膚抗氧化力。療程過程完全無痛、無熱傷害、無傷口，全膚質適用，包括敏感肌與痘痘肌，術後即可正常上妝，不影響日常生活。建議每 3 至 4 週進行一次作為日常皮膚管理保養，可依個人膚況搭配不同精華液客製化療程內容。",
     suitable: "粉刺、角質堆積、肌膚暗沉粗糙；需要深層清潔及快速恢復光澤者。",
     info: [{ k: "療程時間", v: "約 40–60 分鐘" }, { k: "恢復期", v: "幾乎無恢復期" }, { k: "建議次數", v: "每月 1–2 次保養" }, { k: "立即效果", v: "術後即刻亮麗" }],
@@ -1610,6 +2553,10 @@ const DETAIL_MAP = {
   "Seyo 水悠無針水光": {
     licenseName: "",
     licenseNo: "",
+    image: "assets/images/seyo.webp",
+    imageAlt: "Seyo 水悠無針水光產品圖",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "Seyo 水悠無針水光是來自德國的頂尖無針導入美容科技，採用獨家專利 TDA 透皮導入系統（Transdermal Application），將高效活性精華液霧化為超細微分子，以最高每秒 450 公尺的高壓高速噴射方式，無針、無痛、無接觸地將精華成分精準導入至肌膚真皮層，達到深層補水、修復與煥膚的全面效果。一次療程的保濕效果相當於敷了 100 片面膜。\n\n▍TDA 透皮導入技術：無針深入真皮層\n有別於傳統水光針以細針注射的方式，Seyo 水悠完全不需要針頭、不造成任何傷口，治療過程中僅有微風輕拂的舒適感，完全無痛。TDA 技術能突破皮膚角質層的天然屏障，讓活性成分均勻覆蓋每一寸肌膚，深入滲透至肌膚深層，吸收效率大幅超越一般塗抹型保養品，是怕針、敏感肌或希望零恢復期族群的最佳選擇。\n\n▍LP3 專利活性配方：客製化精華導入\nSeyo 水悠搭配德國原廠研發的 LP3 專利微乳膠配方精華，每支精華均通過歐洲皮膚科實驗室驗證。LP3 作為活性載體，能有效帶領精華成分穿越角質屏障，精準滲透至目標層次，大幅提升有效成分的吸收與留存率。診所可依個人膚況客製化選配精華安瓶，常見配方包括高效保濕（玻尿酸、維生素 B3）、深層修復、抗老緊緻及抗痘控油等，實現真正因膚施治的個人化療程。\n\n▍療程特色與建議\n療程約 30 至 40 分鐘，術後即可正常上妝、恢復日常活動，無任何恢復期。適合搭配雷射或電音波療程後使用，可加速術後修復、補充流失水分、舒緩泛紅乾燥。建議每月進行一次作為定期肌膚管理保養，效果約可維持 4 至 6 週，搭配居家防曬與保濕效果更為持久。",
     suitable: "乾燥缺水、皮膚暗沉、想提升肌膚整體水潤感者；對針頭有顧慮者。",
     info: [{ k: "療程時間", v: "約 30 分鐘" }, { k: "恢復期", v: "無恢復期" }, { k: "建議次數", v: "每月 1–2 次" }, { k: "主要成分", v: "玻尿酸精華" }],
@@ -1654,6 +2601,10 @@ const DETAIL_MAP = {
   "韓國雙線音波": {
     licenseName: "『克雷西施』十蓓超音波系統",
     licenseNo: "衛部醫器輸字第036125號",
+    image: "assets/images/korea-double-line-hifu.webp",
+    imageAlt: "韓國雙線音波 真實產品圖片",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "韓國雙線音波（DOUBLO，十蓓超音波系統）是來自韓國的新世代聚焦式超音波拉提儀器，採用高強度聚焦超音波（HIFU）技術，以非侵入式方式精準將能量深入皮下 SMAS 淺筋膜層與真皮層，在不損傷表皮的前提下，於目標深度形成密集的微型熱凝結點（TCP），引發組織即時收縮並持續啟動膠原蛋白與彈力蛋白的大量新生，達到深層拉提與全臉緊緻的雙重效果。\n\n▍雙軌雙線同步輸出：療程效率提升一倍\n韓國雙線音波最核心的技術優勢在於「雙軌雙線同步輸出」設計。傳統音波拉皮採用單線逐發方式，而雙線音波能在同一次擊發中同時輸出兩條平行能量線，單發輸出量為傳統設備的兩倍，大幅縮短整體療程時間至傳統的一半。治療速度的提升不僅節省求診者的等候時間，也因為高能量均勻覆蓋、減少重複施打，有效提升了整體療程的舒適度，特別適合時間有限或對痛感較敏感的族群。\n\n▍雙深度探頭：同步作用筋膜層與真皮層\n療程配備兩款核心探頭，依皮膚厚度與部位需求靈活搭配：\n\n• D4 探頭（4.5mm，SMAS 筋膜層）：能量直達皮下 4.5mm 的 SMAS 淺筋膜層，此層次正是傳統手術拉皮的操作關鍵。精準的高溫熱凝效應使筋膜即時收縮上提，有效改善雙下巴、下顎線鬆弛、嘴邊肉及頸部鬆垂，重塑清晰的臉部 V 型輪廓線條。\n\n• M7 探頭（3.0mm，真皮層）：作用於皮下 3.0mm 的真皮膠原層，刺激膠原蛋白重組與大量增生，改善臉頰鬆弛、法令紋、毛孔粗大及整體膚質緊緻度，讓肌膚從底層加倍緊實彈潤。\n\n兩種探頭搭配使用，可在同一療程中同時達成深層筋膜拉提與中層真皮緊緻的雙重效果，效果層次更全面，是單一深度音波拉皮所無法比擬的優勢。\n\n療程約 60 至 90 分鐘，全程非侵入式，無需開刀或麻醉，術後無恢復期，當日即可正常上妝與生活。多數求診者在治療後可立即感受到輕微緊緻感，術後約 3 個月達到最佳拉提效果，效果一般可維持 1 至 2 年，建議每年施打一次作為定期保養。",
     suitable: "下臉輪廓鬆垮、頸紋明顯、筋膜層鬆弛者；需要深層拉提與表層緊緻雙重效果者。",
     info: [{ k: "療程時間", v: "約 60–90 分鐘" }, { k: "恢復期", v: "輕微腫脹 1–3 天" }, { k: "效果出現", v: "3–6 個月持續改善" }, { k: "效果持續", v: "1–1.5 年" }],
@@ -1662,6 +2613,10 @@ const DETAIL_MAP = {
   "美國音波二代（超音波拉皮）": {
     licenseName: "『優珊納』超音波治療儀",
     licenseNo: "衛部醫器輸字第025344號",
+    image: "assets/images/ultherapy-prime.webp",
+    imageAlt: "美國音波二代（超音波拉皮） 真實產品圖片",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "美國音波二代（Ultherapy PRIME，又稱極透+）是 Ultherapy 極線音波拉皮的全新升級機種，由美國 Merz Aesthetics 研發，是全球唯一同時榮獲美國 FDA、歐盟 CE 及台灣 TFDA 三重認證，且取得非侵入式「拉提」適應症的音波拉皮系統。自第一代上市以來，全球累積超過 300 萬次治療紀錄，並有超過 120 篇學術論文（含 56 項臨床研究）支持其安全性與有效性，是音波拉提領域的黃金標準療程。\n\n▍核心原理：HIFU 微聚焦超音波直達筋膜層\n美國音波二代採用高強度微聚焦超音波能量（MFU-V），將能量如放大鏡般精準聚焦於皮下特定深度，使局部組織溫度瞬間升至 65–75°C，產生熱凝結點（TCPs）。這些微型熱點精準分布於真皮層與 SMAS 淺筋膜層，不影響表皮安全，直接引發膠原蛋白即時收縮（立即緊緻）並啟動後續膠原與彈力蛋白的大量新生（長效提拉），臨床實證膠原蛋白合成量可提升約 42%。\n\n▍DeepSEE™ 專利即時影像技術：SPT 黃金標準療程\n二代機最核心的升級在於 DeepSEE™ 智能超音波即時顯影系統，能在治療前即時掃描並顯示皮下 8mm 深的組織結構，讓醫師清楚確認每一發能量的落點深度與組織厚度，確保 95% 以上的能量精準沉積在預定的筋膜層，完全杜絕盲打。並依據 See（看見）→ Plan（規劃）→ Treat（治療）的 SPT 黃金標準療程流程進行，全程客製化、有據可循，大幅提升治療可靠性與效果穩定性。相較第一代，二代的舒適度也提升顯著，臨床實證痛感可降低約 30%。\n\n▍三種探頭分層精準拉提\n美國音波二代配備三款不同深度的探頭，依個人皮膚厚度與鬆弛程度靈活組合搭配：\n\n• 4.5mm 探頭：深達 SMAS 淺筋膜層，這是傳統手術拉皮的操作層次。能量精準加熱筋膜，使筋膜收縮上提，是改善雙下巴、下顎線、頸部鬆弛與全臉下垂的主力探頭，效果最為顯著持久。\n\n• 3.0mm 探頭：作用於皮下脂肪層與深層真皮層交界，增強皮膚支撐結構，改善臉頰鬆弛、法令紋與嘴邊肉，強化中臉輪廓。\n\n• 1.5mm 探頭：作用於淺層真皮層，細緻肌膚紋理、改善細紋與整體膚質，提升肌膚光澤與緊緻感。\n\n療程約 60 至 90 分鐘，全程無需開刀或麻醉，術後無恢復期，當日即可正常上妝與生活。效果約在治療後 3 個月起顯現，6 個月達到高峰，拉提效果可維持 1 年以上。",
     suitable: "下臉輪廓鬆垮、頸紋明顯、筋膜層鬆弛者。",
     info: [{ k: "療程時間", v: "約 60–90 分鐘" }, { k: "恢復期", v: "輕微腫脹 1–3 天" }, { k: "效果出現", v: "3–6 個月持續改善" }, { k: "效果持續", v: "1–1.5 年" }],
@@ -1670,6 +2625,10 @@ const DETAIL_MAP = {
   "藍鑽魚骨線": {
     licenseName: "愛惜康思達飛抗菌對稱型免打結傷口縫合裝置 / STRATAFIX Symmetric PDS Plus Knotless Tissue Control Device",
     licenseNo: "衛部醫器輸字第028720號",
+    image: "assets/images/blue-diamond-fishbone-thread.webp",
+    imageAlt: "藍鑽魚骨線 真實產品圖片",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "藍鑽魚骨線（STRATAFIX™）由全球手術縫合線龍頭「美國嬌生集團（Ethicon）」研發製造，採用醫療級 PDS（聚二氧六環酮，Polydioxanone）可吸收材質，同時通過台灣衛福部 TFDA、美國 FDA 及歐盟 CE 認證，是目前台灣政府核准可合法用於臉部拉提手術的四款線材之一，在全球超過 100 個國家廣泛使用，累積豐富的臨床安全紀錄。\n\n▍壓模一體成型：拉力強度提升 39%\n藍鑽魚骨線最核心的技術優勢在於其獨家「壓模一體成型」製程。傳統埋線線材採用刀片切割方式製作倒鉤，切割會破壞線體主幹結構，使線材容易在倒鉤根部產生應力集中而斷裂。藍鑽魚骨線則透過壓模技術將線體與倒鉤一體成形，確保主幹結構完整、強韌不易斷裂，倒鉤排列均勻對稱，形如魚骨。臨床測試顯示，此壓模設計的拉力強度平均比傳統切割線高出 39%，在多次拉提操作後仍能維持穩定張力，有效減少術後線材位移與鬆脫的風險。\n\n▍Triclosan 獨家抗菌塗層：降低感染風險達 70%\n線材外層包覆 Triclosan 可代謝抑菌劑（經美國 FDA 核可），植入人體後約 2 至 3 週內可持續抑制金黃葡萄球菌與大腸桿菌在傷口周圍的增生，是目前市面上唯一具備抗菌設計的倒鉤 PDS 拉提線材，有效降低術後早期感染風險達 70%，讓療程安全性大幅提升。\n\n▍雙重效果：即時拉提 + 長效膠原增生\n線材植入皮下 SMAS 淺筋膜層後，對稱雙向倒鉤立即咬合固定鬆垮的組織，術後當日即可感受輪廓線明顯上提。PDS 材質在體內的代謝速率穩定，約 6 至 8 個月逐漸被人體完全吸收，在代謝過程中持續刺激周圍結締組織增生大量新生膠原蛋白，使拉提效果在線材消失後仍能持續維持，整體效果可長達 1.5 至 2 年。\n\n療程在局部麻醉下進行，約 40 至 60 分鐘完成，僅需 0.5 公分微創入口，隱藏於髮際或自然紋路中，傷口幾乎不留痕跡。術後 3 至 7 天腫脹瘀青逐漸消退，約 2 至 3 週恢復完全自然，即可正常社交活動，術後一個月內建議避免臉部大動作表情與臉部按摩。",
     suitable: "輕中度臉部鬆弛下垂、嘴邊肉、法令紋、下顎線模糊者；追求長效拉提且恢復期短者。",
     info: [{ k: "療程時間", v: "約 45–60 分鐘" }, { k: "恢復期", v: "腫脹瘀青 1–2 週" }, { k: "效果持續", v: "1–2 年以上" }, { k: "麻醉方式", v: "局部麻醉" }],
@@ -1678,6 +2637,10 @@ const DETAIL_MAP = {
   "MINT秘特拉提線": {
     licenseName: "『韓士』秘特拉提線 / HansBiomed MINT Polydioxanone Absorbable Thread",
     licenseNo: "衛部醫器輸字第034782號",
+    image: "assets/images/mint-thread.webp",
+    imageAlt: "MINT秘特拉提線 真實產品圖片",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "MINT 秘特拉提線（HansBiomed MINT，俗稱神力拉提）是來自韓國 HansBiomed 研發的新世代醫療級 PDO 可吸收埋線線材，同時通過台灣衛福部 TFDA、美國 FDA、韓國 MFDS 及歐盟 CE 認證，是台灣衛福部核准合法用於中下臉拉提適應症的雙向可吸收拉提線材，亦是目前全球埋線領域中認證最完整、臨床研究最豐富的線材之一，連續多年榮獲「治療滿意度第一名」殊榮。\n\n▍獨家螺旋立體倒勾設計：穩固拉提不易滑脫\nMINT 秘特拉提線最核心的技術優勢在於其獨家「360° 螺旋立體雙向倒勾」結構。傳統埋線線材採用切割方式製作倒勾，容易造成線材強度不均甚至斷裂，而 MINT 採用專利壓印技術，在不破壞線材結構的前提下一體成型製造出雙向倒鉤，使每個倒鉤的鉤力更均勻、更穩固。植入後線材能以多點、全面式 360° 立體拉提方式，緊緊咬住皮下脂肪層與 SMAS 淺筋膜層組織，有效防止組織持續向下鬆垮，拉提力道比傳統倒鉤線更強且持久。\n\n▍雙重功效：即時拉提 + 長效膠原新生\nMINT 埋線提供兩階段的改善效果。第一階段為線材植入後立即產生的物理性拉提，將下垂的臉頰組織固定在較高位置，術後當日即可看見輪廓線收緊、法令紋改善、嘴邊肉上提的效果。第二階段則發生在線材逐漸被人體代謝吸收的過程中（約 6 至 12 個月），PDO 材質在分解的同時會持續刺激周圍結締組織增生大量新生膠原蛋白，使組織重新緻密化，讓拉提效果在線材被完全吸收後仍能維持相當程度的緊緻感，達到「線材雖消失，效果仍在」的長效抗老目的。\n\n▍適用部位與療程規劃\n衛福部核准適應症為中臉拉提，可暫時性固定臉頰皮下脂肪層與 SMAS 層於較高位置，有效治療輕至中度鼻唇溝（法令紋）。臨床上廣泛應用於臉頰鬆弛、嘴邊肉、木偶紋、下顎線模糊及雙下巴等中下臉老化問題。療程在局部麻醉下進行，約 45 至 60 分鐘完成，可視個人鬆弛程度由醫師客製化規劃線材數量、長度、埋入深度與角度。術後可能有輕微腫脹或瘀青，通常於 1 至 2 週內自然消退，效果一般可維持 6 個月以上。",
     suitable: "輕中度臉部下垂、想同時改善凹陷與鬆弛者；術前恢復期短需求者。",
     info: [{ k: "療程時間", v: "約 30–60 分鐘" }, { k: "恢復期", v: "3–7 天輕微腫脹" }, { k: "效果出現", v: "術後即見，3 個月最佳" }, { k: "效果持續", v: "1–2 年（線材可吸收）" }],
@@ -1694,6 +2657,10 @@ const DETAIL_MAP = {
   "METEORA美特拉": {
     licenseName: "美特拉拉提線 / Meteora lifting premium",
     licenseNo: "衛部醫器製字第007883號",
+    image: "assets/images/meteora-thread.webp",
+    imageAlt: "METEORA美特拉 真實產品圖片",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "METEORA 美特拉為台灣核准的可吸收拉提線材，透過線材植入後的物理性支撐與固定，協助改善中下臉鬆弛、嘴邊肉、法令紋與下顎線模糊。線材在體內逐漸代謝的過程中，也會刺激周邊膠原蛋白新生，使輪廓線條隨恢復期逐步自然穩定。\n\n▍療程特色\n醫師會依鬆弛程度、臉型比例、脂肪墊位置與皮膚厚度規劃線材數量、方向與層次。相較單純填充，埋線重點在於把下垂組織重新固定到較理想位置；相較手術拉皮，傷口較小、恢復期較短，適合輕中度鬆弛者。\n\n▍療程規劃\n療程多於局部麻醉下進行，時間約 45 至 60 分鐘。術後可能有腫脹、瘀青、拉扯感、短暫凹凸或不對稱，通常會隨組織貼合逐步改善。效果與維持時間會受線材數量、皮膚鬆弛程度、生活習慣與個人體質影響。",
     suitable: "輕中度臉部下垂、嘴邊肉、法令紋、下顎線模糊，想以非手術方式拉提者。",
     info: [{ k: "療程時間", v: "約 45–60 分鐘" }, { k: "恢復期", v: "腫脹瘀青約 1–2 週" }, { k: "麻醉方式", v: "多為局部麻醉" }, { k: "效果特色", v: "即時拉提、自然漸進" }],
@@ -1702,6 +2669,10 @@ const DETAIL_MAP = {
   "膠原蛋白 熊貓針": {
     licenseName: "双美膚力原膠原蛋白植入劑（含利度卡因）",
     licenseNo: "衛部醫器製字第004509號",
+    image: "assets/images/sunmax-collagen-g3.webp",
+    imageAlt: "膠原蛋白 熊貓針 真實產品圖片",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "膠原蛋白熊貓針（双美膚力原膠原蛋白植入劑）是目前台灣衛福部唯一核准、可合法施打的膠原蛋白填充針劑，由台灣双美生物科技研發製造，採用來自特定無病原（Specific Pathogen Free）豬皮，經高科技純化技術萃取，再透過化學交聯技術製成高純度交聯膠原蛋白纖維，並懸浮於含利度卡因（麻醉成分）的磷酸緩衝液中，與人體自身膠原蛋白的相似度高達 93%，生物相容性極高，過敏機率極低，是目前市場上安全性最受認可的眼周注射選擇之一。\n\n▍四種黑眼圈類型全面改善\n熊貓針最大的特色在於其獨特的「乳白色」膠原蛋白填充質地，注射至眼周淺層皮膚後，能以近似皮膚的自然色調平鋪遮蓋皮下色素，同時透過膠原蛋白本身的多肽成分抑制酪胺酸酶（Tyrosinase）的活性，從源頭減少黑色素的生成與沉積，因此對於四種主要黑眼圈類型均有顯著改善效果：\n\n• 色素型：乳白質地直接遮蓋色素，同時多肽成分抑制黑色素生成，雙重機制淡化暗沉。\n• 血管型：膠原蛋白填充物在皮下形成屏障，有效隔絕因皮膚薄透而外露的藍紫色血管顏色。\n• 結構型（淚溝凹陷）：精準填補淚溝凹陷，消除因凹陷形成的陰影，視覺上立即改善疲憊感。\n• 混合型：同步處理上述多種問題，一次療程達到全面改善。\n\n▍膠原蛋白 vs 玻尿酸：眼周注射的關鍵差異\n眼周皮膚是全臉最薄且最脆弱的部位，傳統玻尿酸填充具高吸水膨脹特性，注射於眼周容易引起浮腫、Tyndall 效應（呈現藍灰色）及明顯腫脹感。熊貓針採用膠原蛋白材質，不吸水膨脹，術後幾乎不會出現水腫問題，質地輕盈貼合，注射後觸感自然，也不易產生顆粒感。同時含利度卡因麻醉成分，療程舒適度高，搭配術前敷麻及冰鎮，整體不適感極低。\n\n▍雙重效果：即時填充 + 長效膠原活化\n膠原蛋白植入後立即填補眼周凹陷，淚溝和黑眼圈術後即可見明顯改善。在後續代謝過程中，膠原蛋白分解產生的胺基酸與營養素會同步活化纖維母細胞，刺激真皮層自體膠原蛋白與彈性纖維的持續新生，讓眼周膚質的緊緻度與光澤感在療程後逐漸提升，達到「填充」與「再生」的雙重抗老效果。效果一般可維持 3 至 6 個月，建議初期每 3 至 6 個月補打一次以維持最佳效果。",
     suitable: "淚溝凹陷、眼下暗沉色素型黑眼圈、眼周疲憊感明顯者。",
     info: [{ k: "療程時間", v: "約 20–40 分鐘" }, { k: "恢復期", v: "輕微淤青 3–7 天" }, { k: "效果持續", v: "3–6 個月" }, { k: "維持方式", v: "定期補打維持" }],
@@ -1710,6 +2681,10 @@ const DETAIL_MAP = {
   "双美 膚漾美 G4白金針": {
     licenseName: "双美膚漾美膠原蛋白植入劑(含利度卡因) / Sunmax Deusaderm ULTRA Collagen Implant with Lidocaine",
     licenseNo: "衛部醫器製字第008134號",
+    image: "assets/images/sunmax-collagen-g4.webp",
+    imageAlt: "双美 膚漾美 G4白金針 真實產品圖片",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "双美 膚漾美 G4白金針為双美生技第四代膠原蛋白植入劑，主成分為交聯膠原蛋白並含利度卡因，適用於注射至臉部真皮組織中至深層位置，以矯正顏面皮膚缺陷。臨床規劃上可用於鼻唇溝、法令紋、輪廓凹陷與眼周老化等需求，由醫師依部位與層次評估施打。\n\n▍療程特色\n膠原蛋白材質與人體膠原結構相近，注射後可立即填補凹陷，同時提供自然柔和的觸感。相較高吸水性的填充物，膠原蛋白在眼周或淺層細緻區域常被用於追求自然、不易浮腫的改善。G4 膚漾美濃度較高，適合需要較明確支撐與深層填補的輪廓與紋路問題。\n\n▍療程規劃\n療程前需評估凹陷程度、皮膚厚度、血管分布、過往填充史與過敏史。注射時間約 20 至 40 分鐘，術後可能有針點、腫脹、瘀青或短暫不平整，多數會在數日至兩週內逐漸改善。效果維持時間依部位、劑量、代謝速度與生活習慣而異。",
     suitable: "法令紋、鼻唇溝、輪廓凹陷、淚溝、黑眼圈、眼周細紋，追求自然填補者。",
     info: [{ k: "療程時間", v: "約 20–40 分鐘" }, { k: "恢復期", v: "針點瘀青約 3–7 天" }, { k: "主要成分", v: "交聯膠原蛋白、利度卡因" }, { k: "治療重點", v: "膠原填充、自然支撐" }],
@@ -1798,6 +2773,10 @@ const DETAIL_MAP = {
               "V50 極濃玻尿酸": {
     licenseName: "『艾斯塔』可立美康圖爾玻尿酸 / 'AESTURA' CLEVIEL CONTOUR Dermal Implant",
     licenseNo: "衛署醫器輸字第030698號",
+    image: "assets/images/v50-cleviel-ha.webp",
+    imageAlt: "V50 極濃玻尿酸 真實產品圖片",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "V50 極濃玻尿酸（CLEVIEL 可立美）由韓國 No.1 護膚化妝品集團愛茉莉太平洋（AMOREPACIFIC）的專業團隊耗時 5 年、超過數百名專家研發，並由璦絲特蘭（AESTURA）製造，通過韓國 KFDA、歐盟 CE 及台灣 TFDA 認證。因擁有同類產品中最高的玻尿酸濃度，被業界稱為「V50 玻尿酸」，是目前市面上濃度最高的玻尿酸之一，專為亞洲人立體輪廓塑形設計。\n\n▍全球最高 50mg/ml 濃度：高塑形力與持久度\nV50 最大的特色在於其突破性的 50mg/ml 高透明質酸濃度，比一般品牌玻尿酸高出約一倍。極高的濃度賦予其三大物理特性——高黏度、高彈性、高內聚力，使其在塑型時擁有強大的承托力，能精準堆疊出立體挺翹的鼻樑、下巴與飽滿輪廓，呈現如手術般精緻的效果，且因密度高不易被人體酵素分解，持久度遠優於一般玻尿酸，臨床文獻證實支撐度最久可維持約 24 個月（效果因個人體質而異）。\n\n▍4L 交聯技術：安全穩定不易位移\nV50 採用 CLEVIEL 專利的「4L 交聯技術」，這是首個獲得韓國保健福祉部頒發 NET 新創科技獎的透明質酸填充劑技術。4L 代表四大優勢：\n\n• Low BDDE（低化學交聯）：化學交聯程度低於 1%，其餘以天然物理方式形成自然鍵結，結構札實穩定、安全性高。\n• Low Temperature（低溫製程）：低溫環境製造，減少玻尿酸於製程中的降解，維持分子完整。\n• Low Swelling（低腫脹）：注射後不易因吸水而膨脹，大幅減低術後水腫、泛紅與過敏反應，恢復期短。\n• Long Duration（長效持久）：高密度透明質酸搭配穩定結構，使效果維持更久。\n\n▍高內聚力：精準塑形不變形\nV50 具有極高的內聚力，施打後不易擴散位移，即使受到外力擠壓或肌膚自身張力影響，也能迅速回復原狀、不易變形，特別適合需要強支撐與精準定位的中軸線部位（山根、鼻樑、下巴）及凹陷填補（頰凹、夫妻宮、太陽穴）。\n\n療程約 20 至 40 分鐘，注射後即有立即的豐盈塑形效果，因低腫脹特性術後腫脹輕微，約 2 至 3 天消退即可正常生活。效果一般可維持 12 至 24 個月，由醫師依個人輪廓條件與需求精準規劃注射部位與劑量。",
     suitable: "頰凹（顳部凹陷）、夫妻宮扁塌、太陽穴凹陷、山根鼻樑或下巴需要立體塑形者。",
     info: [{ k: "療程時間", v: "約 20–40 分鐘" }, { k: "恢復期", v: "輕微腫脹 2–3 天" }, { k: "效果", v: "立即豐盈感" }, { k: "效果持續", v: "18–24 個月" }],
@@ -1830,6 +2809,10 @@ const DETAIL_MAP = {
   "Ellansé 洢蓮絲": {
     licenseName: "洢蓮絲植入劑",
     licenseNo: "衛部醫器輸字第026659號",
+    image: "assets/images/ellanse.webp",
+    imageAlt: "Ellansé 洢蓮絲 真實產品圖片",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "Ellansé 洢蓮絲是一種以 PCL（Polycaprolactone，聚己內酯）微型晶球與 CMC 凝膠載體組成的注射型植入劑，常被稱為少女針。它的特色是結合立即填補與後續膠原新生：CMC 凝膠提供初期支撐與凹陷修飾，PCL 微晶球則在體內逐步誘導自體膠原蛋白生成，使輪廓與膚質在數週至數月內逐漸變得更飽滿、緊實與自然。\n\n▍療程特色\n洢蓮絲不是單純玻尿酸，也不是永久性填充物。PCL 微晶球會隨時間逐步代謝，在代謝過程中刺激周圍組織形成新的膠原支架，因此常用於需要長效支撐、臉部凹陷改善與輪廓修飾的部位。相較於傳統填充物，它更重視「先填補、後增生」的雙階段效果，適合希望效果自然延續、減少頻繁補打的人。\n\n▍適合族群\n適合臉部容量流失、夫妻宮或臉頰凹陷、法令紋、木偶紋、下巴或輪廓支撐不足，以及希望改善整體鬆弛老化感的人。由於其刺激膠原的特性，施打層次、部位與劑量需要精準規劃，通常不適合在非常表淺、皮膚很薄或動態頻繁的部位大量施打。\n\n▍療程規劃\n治療前醫師會評估臉部比例、骨架支撐、脂肪流失與皮膚彈性，並確認過去填充史。療程約 30 至 60 分鐘，可搭配麻膏、冰敷或鈍針降低不適。初期可見填補感，後續膠原增生約數週至數月逐漸顯現；維持時間依劑型、部位、劑量與個人代謝不同而異。",
     suitable: "臉部整體組織流失、想要長效改善者；需要自然膠原增生感的族群。",
     info: [{ k: "療程時間", v: "約 30–60 分鐘" }, { k: "恢復期", v: "輕微腫脹 3–5 天" }, { k: "效果出現", v: "注射後 2–3 個月漸進" }, { k: "效果持續", v: "2 年以上" }],
@@ -1982,6 +2965,10 @@ const DETAIL_MAP = {
   "miraDry 清新微波": {
     licenseName: "『美麗華實驗室』多汗症治療系統及其配件",
     licenseNo: "衛部醫器輸字第025955號",
+    image: "assets/images/miradry.webp",
+    imageAlt: "miraDry 清新微波 真實產品圖片",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "miraDry 清新微波是全球唯一同時通過美國 FDA、歐盟 CE 及台灣衛福部三大國際權威機構認證，核准用於治療腋下多汗症的非侵入式微波熱能止汗系統。全球已執行超過 20 萬次療程，臨床實證一次療程即可達到 80% 以上的腋下排汗量減少，多數求診者單次即可達到高度滿意效果，是目前取代侵入式手術切除汗腺的最理想非手術選擇。\n\n▍大小汗腺與狐臭成因\n人體腋下分布有兩種汗腺：小汗腺（外分泌腺）負責排汗調節體溫，分泌物本身無異味；大汗腺（頂漿腺）則會分泌富含蛋白質與脂肪酸的分泌物，經腋下皮膚表面細菌分解後產生明顯異味，即俗稱的狐臭。狐臭與遺傳高度相關，據統計父母皆有腋臭者，子女約有九成同樣出現相同症狀。miraDry 能同時破壞大小汗腺，因此可一次性解決多汗、狐臭異味及腋下毛髮三大困擾。\n\n▍專利微波技術：精準聚焦汗腺層\nmiraDry 採用 5.8GHz 高頻微波技術，利用不同介質（皮膚組織與脂肪）的電磁性能差異形成能量反射，將熱能精準聚焦傳遞至真皮層與皮下脂肪交界處（皮下約 5mm），也就是大小汗腺分布最密集的位置，使目標區域溫度穩定維持在 60–70°C，有效使汗腺細胞受熱萎縮並永久喪失功能，汗腺一旦被破壞便不再新生，效果持久穩定。\n\n與傳統肉毒桿菌注射止汗不同，肉毒僅暫時性阻斷神經傳導抑制排汗，效果僅維持 4 至 6 個月且對異味無改善效果；miraDry 直接從結構上永久破壞汗腺，一勞永逸。\n\n▍雙重專利冷卻系統：皮膚零燙傷\n療程中，探頭搭載專利水冷卻系統，在微波能量輸出的同時同步將皮膚表面溫度維持在 15°C，探頭內建 7 個加熱區與 7 個溫度監測器，若偵測到皮膚溫度超過 40°C 即自動暫停能量輸出，確保表皮與真皮層上方組織完全不受熱能影響，實現深層汗腺受熱破壞、表皮零燙傷的雙重保護效果。\n\n療程前需進行局部麻醉（腋下皮下注射生理食鹽水），整體治療時間約 40 至 60 分鐘，無傷口、無縫線、無手術恢復期，術後當日即可正常活動。全身共有約 200 至 400 萬條汗腺，腋下僅佔其中約 2%，消除腋下汗腺並不會影響全身整體的散熱與降溫能力，且不會產生代償性出汗（即不會導致其他部位出汗增加）。",
     suitable: "腋下多汗症、狐臭（腋臭）困擾者；希望永久改善、不想反覆注射肉毒者。",
     info: [{ k: "療程時間", v: "約 60–90 分鐘" }, { k: "恢復期", v: "腫脹 3–7 天" }, { k: "效果持續", v: "永久性（汗腺不再生）" }, { k: "建議次數", v: "通常 1–2 次即可" }],
@@ -2082,6 +3069,10 @@ const DETAIL_MAP = {
   "MCS+血液淨化": {
     licenseName: "（請填入儀器仿單名稱）",
     licenseNo: "（請填入許可證字號）",
+    image: "assets/images/mcs-blood-purification.webp",
+    imageAlt: "MCS+血液淨化產品圖",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "MCS+ 血液淨化（全名 Haemonetics Mobile Collection System Plus，又稱血漿置換術 / Therapeutic Plasma Exchange，俗稱「洗血」或「淨血」）是一種透過醫療級高速離心技術，將血球與血漿分離、清除血漿中有害物質後再回輸體內的預防醫學療程。這項技術最早用於腎臟科與自體免疫疾病患者，隨著技術精進，目前已廣泛應用於預防醫學與抗老化保健領域，在日本與歐洲行之有年，台大醫院早在 1985 年即引進相關技術。\n\n▍離心分離原理：精準清除血漿中的有害物質\n療程核心技術為高速離心分離，原理類似脫水機的旋轉分離：將血液抽出後送入離心機，利用血球與血漿的比重差異將兩者分離，保留紅血球、白血球與血小板等重要血球成分，針對性地移除血漿中積累的有害物質，包括：膽固醇與三酸甘油脂（降低血脂）、自由基（減少細胞氧化壓力）、發炎因子（改善慢性發炎）、致癌因子、各類抗體與抗原（適用於自身免疫相關問題）、尿酸（降低痛風風險）、重金屬（排除體內毒素積累）。處理後的乾淨血球與代用血漿混合後一併回輸體內，讓血液恢復清澈、活力充沛的年輕狀態。\n\n▍MCS+ 單針系統：舒適高效\nMCS+ 採用單針系統設計，全程只需一隻手臂留置靜脈針，另一隻手可自由活動，相較於傳統需雙手扎針的技術大幅提升舒適度。系統搭載多重氣泡與壓力感測器，一旦偵測到任何異常即自動停機，安全性極高。使用特殊抗凝劑 ACD-A，人體代謝快、不影響正常凝血功能，大幅降低出血風險。整體療程時間約 1 至 1.5 小時，相較傳統技術的 3 至 4 小時大幅縮短，效率更高。\n\n▍六大標準化療程步驟\n每次療程皆依以下流程進行，全程由醫師與護理團隊監控：（1）醫師諮詢評估 → （2）術前抽血檢測（血液、肝腎功能）→ （3）留置靜脈針 → （4）高速離心血液淨化 → （5）淨化血球與代用血漿回輸 → （6）術後抽血與術前數據比對，確認療程成效。\n\n療程適合心血管疾病風險族群、三高族群、慢性疲勞、免疫失調及追求預防醫學抗老化的族群，所有療程均須由醫師詳細評估後方可進行。",
     suitable: "心血管疾病風險族群、三高族群、慢性疲勞、免疫失調、重金屬積累或抗老化保健需求者；需醫師評估。",
     info: [{ k: "療程時間", v: "約 1–1.5 小時" }, { k: "恢復期", v: "幾乎無" }, { k: "建議頻率", v: "依醫師評估規劃" }, { k: "術前檢測", v: "血液及肝腎功能" }],
@@ -2090,6 +3081,10 @@ const DETAIL_MAP = {
   "OLIB靜脈雷射": {
     licenseName: "（請填入儀器仿單名稱）",
     licenseNo: "（請填入許可證字號）",
+    image: "assets/images/olib-intravenous-laser.webp",
+    imageAlt: "OLIB靜脈雷射產品圖",
+    imageCaption: "",
+    imageRatio: "4 / 3",
     desc: "OLIB 靜脈雷射（On-venous Laser Irradiation of Blood，又稱「貼式靜脈雷射」或「低能量生化雷射血管內照療法」）是一種以低能量紅光雷射作用於皮膚上方靜脈，透過光化學效應改善血液品質與全身循環的功能醫學輔助療程。相較於傳統 ILIB 需要將光纖針頭穿刺插入靜脈內照射，OLIB 採用非侵入式的貼式照射，將雷射探頭直接貼附於靜脈上方皮膚，完全免針、免侵入，大幅降低感染風險，治療接受度更高，適合各年齡層安心使用。\n\n▍作用原理：給血液一場「日光浴」\nOLIB 使用波長 630–660nm 的低能量紅光雷射，此波長具有極強的組織穿透力，能穿過皮膚直達表淺靜脈，作用於流經的血液。人體血液每小時在體內循環約 6 至 7 次，每次治療約 60 分鐘內，可對大量血液進行光照處理，透過一系列生化、光化學與生物光子效應，達到「活化血液」的目的——就像讓血液進行一場溫和的日光浴。\n\n具體機轉包括：提升紅血球的攜氧能力與彈性變形活力，使紅血球能順暢進入更細小的微血管與末梢循環；活化多種代謝酶與免疫調節因子；刺激細胞粒線體能量代謝、促進 ATP 生成；同時透過抗氧化機制減少體內自由基損傷，延緩細胞老化。\n\n▍臨床應用與改善範圍\nOLIB 靜脈雷射的臨床應用廣泛，在預防醫學與功能醫學領域被用於以下方面的輔助保健：\n\n• 循環代謝調理：改善血液循環與微循環、降低血液黏稠度、預防血管硬化與阻塞風險，對有三高（高血壓、高血糖、高血脂）困擾者有輔助調節作用。\n• 免疫力提升：激活免疫系統，增強抗病能力，減少感冒、過敏及慢性炎症發作頻率。\n• 抗疲勞與睡眠改善：活化自律神經、提升副交感神經活性，使身體進入放鬆修復狀態，改善慢性疲勞、壓力過大及睡眠障礙。\n• 術後修復加速：促進傷口癒合、減少術後腫脹與發炎，適合雷射、電音波、植髮等醫美或外科術後的輔助修復保養。\n• 抗老化與膚質改善：活化細胞能量代謝、促進膠原蛋白合成，有助於改善皮膚暗沉、皺紋及整體膚質。\n\n每次療程約 30 至 60 分鐘，過程輕鬆舒適，多數求診者無明顯不適，可正常閱讀、休息或聆聽音樂，療程結束後即可正常活動，無任何恢復期。建議初次療程 3 至 5 次作為初步調理，長期保養者每週 1 至 2 次，依個人體質與健康目標由醫師評估規劃。",
     suitable: "循環不良、慢性疲勞、免疫力低下、抗老化保養需求者。",
     info: [{ k: "療程時間", v: "約 30–60 分鐘" }, { k: "恢復期", v: "無" }, { k: "建議次數", v: "每月 1–2 次" }, { k: "作用機制", v: "雷射能量改善血液循環" }],
@@ -2134,6 +3129,45 @@ function getSelectionKind(names) {
   return "項目";
 }
 
+const PLACEHOLDER_IMAGE = "assets/images/aesop-placeholder.svg";
+const CATEGORY_IMAGE_MAP = {
+  aespa_products: "assets/images/aespa-clear-uv-protection.webp",
+  beauty: "assets/images/acne-clearing.webp",
+  health_type: "assets/images/mcs-blood-purification.webp",
+  botox: "assets/images/xeomin.webp",
+  laser: "assets/images/dermablate-mcl32-er-yag-laser-mole-removal.webp",
+  rf_ultrasound: "assets/images/oligio-x.webp",
+  ha: "assets/images/restylane-obt.webp",
+  collagen_stim: "assets/images/radiesse.webp",
+  collagen_filler: "assets/images/sunmax-collagen-g3.webp",
+  skinbooster: "assets/images/belotero-revive.webp",
+  thread: "assets/images/mint-thread.webp",
+  surgery: "assets/images/category-surgery-neutral.webp",
+  hair_weight: "assets/images/exohair.webp",
+  skincare_products: "assets/images/uv-gel.webp"
+};
+
+function findTreatmentCategory(name) {
+  for (const cat of DATA.categories) {
+    for (const sc of cat.subcategories) {
+      if (sc.treatments.some(t => t.name === name)) return cat;
+    }
+  }
+  return null;
+}
+
+function getCategoryMedia(cat) {
+  const image = CATEGORY_IMAGE_MAP[cat.id] || PLACEHOLDER_IMAGE;
+  return {
+    image,
+    alt: `${cat.name} 分類圖片`
+  };
+}
+
+function getTreatmentSearchText(t) {
+  return [t.name, t.device, t.desc, ...(t.tags || [])].join(" ").toLowerCase();
+}
+
 function getDetailData(name) {
   if (DETAIL_MAP[name]) return DETAIL_MAP[name];
   if (PRODUCT_DETAIL_NAMES.has(name)) {
@@ -2154,12 +3188,17 @@ function getDetailData(name) {
   };
 }
 
-function getTreatmentMedia(name) {
+function getTreatmentMedia(name, category) {
   const detail = getDetailData(name);
   return detail && detail.image ? {
     image: detail.image,
-    alt: detail.imageAlt || `${name} 圖片`
-  } : null;
+    alt: detail.imageAlt || `${name} 圖片`,
+    ratio: detail.imageRatio || "4 / 3"
+  } : {
+    image: (category && CATEGORY_IMAGE_MAP[category.id]) || (findTreatmentCategory(name) && CATEGORY_IMAGE_MAP[findTreatmentCategory(name).id]) || PLACEHOLDER_IMAGE,
+    alt: `${name} 圖片`,
+    ratio: "4 / 3"
+  };
 }
 
 function escapeAttr(value) {
@@ -2275,11 +3314,13 @@ function renderCategoryList() {
   const list = document.getElementById('category-list');
   list.innerHTML = DATA.categories.filter(cat => (cat.group || 'concern') === 'concern').map(cat => {
     const total = new Set(cat.subcategories.flatMap(sc => sc.treatments.map(t => t.name))).size;
+    const media = getCategoryMedia(cat);
     return `
       <div class="category-item" onclick="openCategory('${cat.id}')">
         <div class="cat-left">
-          <span class="cat-icon">${cat.icon}</span>
-          <div>
+          <div class="cat-media"><img src="${media.image}" alt="${escapeAttr(media.alt)}" loading="lazy"></div>
+          <div class="cat-meta">
+            <div class="cat-kicker">${cat.icon} Explore</div>
             <div class="cat-name">${cat.name}</div>
             <div class="cat-count">${cat.concern} · ${total} 項療程</div>
           </div>
@@ -2294,11 +3335,13 @@ function renderTypeList() {
   list.innerHTML = DATA.categories.filter(cat => cat.group === 'type').map(cat => {
     const total = new Set(cat.subcategories.flatMap(sc => sc.treatments.map(t => t.name))).size;
     const itemLabel = isProductCategory(cat) ? '項保養品' : '項療程';
+    const media = getCategoryMedia(cat);
     return `
       <div class="category-item" onclick="openCategory('${cat.id}')">
         <div class="cat-left">
-          <span class="cat-icon">${cat.icon}</span>
-          <div>
+          <div class="cat-media"><img src="${media.image}" alt="${escapeAttr(media.alt)}" loading="lazy"></div>
+          <div class="cat-meta">
+            <div class="cat-kicker">${cat.icon} Catalogue</div>
             <div class="cat-name">${cat.name}</div>
             <div class="cat-count">${cat.concern} · ${total} ${itemLabel}</div>
           </div>
@@ -2311,11 +3354,14 @@ function renderTypeList() {
 // ── Panel open/close ──
 function openCategory(catId, defaultSubcat) {
   currentCatId = catId;
+  treatmentSearchQuery = "";
   const cat = DATA.categories.find(c => c.id === catId);
   currentPanelCat = cat;
   const subcategories = getDisplaySubcategories(cat);
   document.getElementById('panel-title').textContent = cat.name;
   currentSubcat = defaultSubcat || subcategories[0].name;
+  const searchInput = document.getElementById('treatment-search');
+  if (searchInput) searchInput.value = "";
   renderSubcats(cat);
   renderTreatments(cat);
   document.getElementById('treatment-panel').classList.add('open');
@@ -2340,6 +3386,7 @@ function getTreatmentsByKeyword(keyword) {
 function openKeyword(keyword) {
   const treatments = getTreatmentsByKeyword(keyword);
   currentCatId = null;
+  treatmentSearchQuery = "";
   currentPanelCat = {
     id: `keyword-${keyword}`,
     name: keyword,
@@ -2347,6 +3394,8 @@ function openKeyword(keyword) {
   };
   currentSubcat = '全部療程';
   document.getElementById('panel-title').textContent = `關鍵字：${keyword}`;
+  const searchInput = document.getElementById('treatment-search');
+  if (searchInput) searchInput.value = "";
   renderSubcats(currentPanelCat);
   renderTreatments(currentPanelCat);
   document.getElementById('treatment-panel').classList.add('open');
@@ -2434,6 +3483,12 @@ function selectSubcat(name) {
   renderTreatments(cat);
 }
 
+function handleTreatmentSearch(value) {
+  treatmentSearchQuery = value.trim().toLowerCase();
+  const cat = currentPanelCat || DATA.categories.find(c => c.id === currentCatId);
+  if (cat) renderTreatments(cat);
+}
+
 function renderTreatments(cat) {
   let items = [];
   const subcategories = getDisplaySubcategories(cat);
@@ -2446,18 +3501,30 @@ function renderTreatments(cat) {
     });
   }
 
+  const query = treatmentSearchQuery;
+  if (query) {
+    items = items.filter(t => getTreatmentSearchText(t).includes(query));
+  }
+
+  const resultCount = document.getElementById('result-count');
+  if (resultCount) {
+    const noun = isProductCategory(cat) ? '保養品' : '療程';
+    resultCount.textContent = query ? `找到 ${items.length} 項${noun}` : '';
+  }
+
   const list = document.getElementById('treatment-list');
   if (!items.length) {
-    list.innerHTML = `<div class="empty-state">此分類暫無${isProductCategory(cat) ? '保養品' : '療程'}</div>`;
+    const noun = isProductCategory(cat) ? '保養品' : '療程';
+    list.innerHTML = `<div class="empty-state">${query ? `沒有符合「${escapeText(treatmentSearchQuery)}」的${noun}` : `此分類暫無${noun}`}</div>`;
     return;
   }
-  list.innerHTML = items.map(t => renderTreatmentCard(t)).join('');
+  list.innerHTML = items.map(t => renderTreatmentCard(t, { category: cat })).join('');
 }
 
 function renderTreatmentCard(t, options = {}) {
   const key = t.name;
   const sel = selectedTreatments.has(key);
-  const media = getTreatmentMedia(key);
+  const media = getTreatmentMedia(key, options.category);
   const matchedTags = options.matchedTags || [];
   const tags = matchedTags.length ? matchedTags : t.tags;
   return `
@@ -2498,6 +3565,24 @@ function scrollDetailTo(targetId) {
   panel.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 
+function setupDetailAccordions() {
+  const cards = [
+    'detail-license-block',
+    'detail-desc-card',
+    'detail-suitable-card',
+    'detail-info-card',
+    'detail-notes-card'
+  ].map(id => document.getElementById(id)).filter(Boolean);
+
+  cards.forEach(card => {
+    card.classList.remove('open');
+    card.onclick = event => {
+      if (event.target.closest('button')) return;
+      card.classList.toggle('open');
+    };
+  });
+}
+
 function toggleFromCard(name, cardEl) {
   if (selectedTreatments.has(name)) {
     selectedTreatments.delete(name);
@@ -2531,6 +3616,8 @@ function openDetail(name) {
   if (!t) return;
 
   const detail = getDetailData(name);
+  const treatmentCategory = findTreatmentCategory(name);
+  const media = getTreatmentMedia(name, treatmentCategory);
   const isProduct = isProductItem(name);
   document.getElementById('detail-panel-title').textContent = t.name;
   document.getElementById('detail-device').textContent = t.device;
@@ -2539,18 +3626,18 @@ function openDetail(name) {
   document.getElementById('detail-info-label').textContent = isProduct ? '產品資訊' : '療程資訊';
   document.getElementById('detail-tags').innerHTML = t.tags.map(tg => `<span class="detail-tag">${tg}</span>`).join('');
   const imageBlock = document.getElementById('detail-image-block');
-  if (detail.image) {
+  if (media && media.image) {
     const detailImage = document.getElementById('detail-image');
-    detailImage.src = detail.image;
-    detailImage.alt = detail.imageAlt || `${t.name} 商品圖片`;
-    detailImage.style.aspectRatio = detail.imageRatio || '16 / 9';
-    document.getElementById('detail-image-caption').textContent = detail.imageCaption || `${t.name} 商品圖片`;
+    detailImage.src = media.image;
+    detailImage.alt = media.alt || `${t.name} 圖片`;
+    detailImage.style.aspectRatio = media.ratio || detail.imageRatio || '4 / 3';
+    document.getElementById('detail-image-caption').textContent = detail.imageCaption || "";
     imageBlock.hidden = false;
   } else {
     imageBlock.hidden = true;
     const detailImage = document.getElementById('detail-image');
     detailImage.removeAttribute('src');
-    detailImage.style.aspectRatio = '16 / 9';
+    detailImage.style.aspectRatio = '4 / 3';
   }
   document.getElementById('detail-desc').innerHTML = (detail.desc || t.desc)
     .replace(/▍([^\n]+)/g, '<strong>▍$1</strong>')
@@ -2587,6 +3674,7 @@ function openDetail(name) {
     .replace(/\n\n/g, '<br><br>')
     .replace(/\n・/g, '<br>・')
     .replace(/\n/g, '<br>');
+  setupDetailAccordions();
 
   // Update add button
   const addBtn = document.getElementById('detail-add-btn');
@@ -2657,7 +3745,7 @@ function updateActionBar() {
   const names = Array.from(selectedTreatments);
   const kind = getSelectionKind(names);
   const unit = kind === '項目' ? '項目' : `項${kind}`;
-  document.getElementById('selected-count-label').textContent = `已選擇 ${count} ${unit}`;
+  document.getElementById('selected-count-label').textContent = `我的諮詢清單 ${count}`;
   document.getElementById('selected-names').textContent = names.join('、');
   document.getElementById('selected-drawer-list').innerHTML = names.map(name => `
     <div class="selected-drawer-item">
