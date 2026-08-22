@@ -7,7 +7,9 @@
   const initialAuthType = initialHashParams.get("type") || initialQueryParams.get("type");
   const initialPasswordSetupFlow = ["invite", "recovery"].includes(initialAuthType) || initialQueryParams.has("code");
   const configured = Boolean(config.url && config.publishableKey && window.supabase);
-  const db = configured ? window.supabase.createClient(config.url, config.publishableKey) : null;
+  const db = configured ? window.supabase.createClient(config.url, config.publishableKey, {
+    auth: { flowType: "pkce", detectSessionInUrl: true, persistSession: true }
+  }) : null;
   const catalog = Array.isArray(window.TREATMENT_CATALOG) ? window.TREATMENT_CATALOG : [];
   const statusLabels = {
     draft: "草稿",
@@ -486,6 +488,7 @@
   async function boot() {
     $("setup-warning").hidden = configured;
     $("login-form").querySelector("button").disabled = !configured;
+    $("request-password-reset").disabled = !configured;
     if (!configured) return;
     const { data } = await db.auth.getSession();
     session = data.session;
@@ -507,6 +510,22 @@
     session = data.session;
     $("login-message").textContent = "";
     await showApp();
+  });
+  $("request-password-reset").addEventListener("click", async () => {
+    const email = $("login-email").value.trim();
+    if (!email) {
+      $("login-message").textContent = "請先輸入電子郵件。";
+      $("login-email").focus();
+      return;
+    }
+    $("login-message").textContent = "寄送密碼設定信中...";
+    const redirectTo = window.location.protocol === "file:"
+      ? "https://medglowbio-ship-it.github.io/aesthetic-liff-site/admin/"
+      : new URL("./", window.location.href).href.replace(/[?#].*$/, "");
+    const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo });
+    $("login-message").textContent = error
+      ? `寄送失敗：${error.message}`
+      : "密碼設定信已寄出，請使用同一個瀏覽器開啟最新信件。";
   });
   $("password-setup-form").addEventListener("submit", async event => {
     event.preventDefault();
