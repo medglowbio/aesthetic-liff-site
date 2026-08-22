@@ -20,6 +20,9 @@ if (META_PIXEL_ID && META_PIXEL_ID !== 'YOUR_META_PIXEL_ID') {
 }
 </script>
 <script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/config/supabase-config.js"></script>
+<script src="assets/js/supabase-cases.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;500&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -1446,20 +1449,6 @@ body {
   display: none;
 }
 
-.header-actions {
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  color: var(--ink);
-  font-size: 22px;
-  line-height: 1;
-  letter-spacing: .04em;
-}
-
 .tab-bar {
   gap: 0;
   padding: 0 18px;
@@ -1999,6 +1988,535 @@ body {
     margin: 0 auto;
   }
 }
+
+/* ── Primary / treatment navigation ── */
+.primary-tab-bar .tab-btn {
+  flex-basis: 33.333%;
+}
+
+.treatment-subnav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 10px 14px 0;
+  background: rgba(245,241,233,.74);
+  border-bottom: 1px solid var(--border);
+}
+
+.treatment-subnav-btn {
+  min-width: 0;
+  padding: 10px 6px 11px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: var(--font-serif);
+  font-size: 13px;
+  letter-spacing: .05em;
+  cursor: pointer;
+}
+
+.treatment-subnav-btn.active {
+  color: var(--ink);
+  border-bottom-color: var(--gold);
+}
+
+.treatment-mode-view { display: none; }
+.treatment-mode-view.active {
+  display: block;
+  animation: softFadeIn .24s ease both;
+}
+
+/* ── Case gallery ── */
+.case-hub {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 14px 116px;
+}
+
+.case-intro {
+  padding: 2px 6px 22px;
+}
+
+.case-kicker,
+.related-cases-head span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--gold);
+  font-size: 10px;
+  letter-spacing: .18em;
+}
+
+.case-intro h1 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: .06em;
+}
+
+.case-intro p {
+  margin: 9px 0 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.case-toolbar {
+  margin-bottom: 16px;
+}
+
+.case-type-filter {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+  background: rgba(245,241,233,.68);
+}
+
+.case-type-btn {
+  min-width: 0;
+  padding: 10px 4px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.case-type-btn:last-child { border-right: 0; }
+.case-type-btn.active {
+  background: var(--teal);
+  color: var(--warm-white);
+}
+
+.case-filter-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.case-filter-toggle {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: rgba(245,241,233,.74);
+  color: var(--ink-soft);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.case-filter-toggle span:not(:empty)::before {
+  content: " ";
+}
+
+.case-filter-toggle.active {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.case-filter-panel {
+  display: none;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--warm-white);
+}
+
+.case-filter-panel.open { display: block; }
+.case-filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.case-filter-option {
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.case-filter-option.active {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: var(--warm-white);
+}
+
+.case-filter-empty {
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+
+.case-active-filters {
+  display: none;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.case-active-filters.visible { display: flex; }
+.case-active-chip {
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: var(--gold-pale);
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.case-clear-filters {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--gold);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.case-result-summary {
+  min-height: 18px;
+  margin: 0 2px 8px;
+  color: var(--ink-muted);
+  font-size: 10px;
+  letter-spacing: .05em;
+}
+
+.case-data-status {
+  grid-column: 1 / -1;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  background: rgba(245,241,233,.56);
+  color: var(--ink-muted);
+  font-size: 11px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.case-data-retry {
+  margin-left: 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-gold);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--gold);
+  font: inherit;
+  cursor: pointer;
+}
+
+.case-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.case-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--warm-white);
+  cursor: pointer;
+}
+
+.case-card-media,
+.case-comparison {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #d8d0c4;
+}
+
+.case-comparison figure {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.case-comparison figure + figure { border-left: 1px solid rgba(255,255,255,.72); }
+.case-comparison img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.case-photo-label {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 3px 5px;
+  background: rgba(32,29,25,.68);
+  color: white;
+  font-size: 8px;
+  letter-spacing: .08em;
+}
+
+.case-card-body { padding: 10px 9px 11px; }
+.case-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  margin-bottom: 6px;
+  color: var(--gold);
+  font-size: 8px;
+  letter-spacing: .08em;
+}
+
+.case-card h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.case-card-tags,
+.case-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.case-card-tag-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  margin-top: 8px;
+}
+
+.case-card-tag-label {
+  padding-top: 3px;
+  color: var(--gold);
+  font-size: 8px;
+  letter-spacing: .05em;
+}
+
+.case-card-tag-row .case-card-tags { margin-top: 0; }
+
+.case-card-tag,
+.case-detail-tag {
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--ink-muted);
+  font-size: 8px;
+}
+
+.case-empty-state {
+  grid-column: 1 / -1;
+  padding: 58px 24px;
+  border: 1px solid var(--border);
+  background: rgba(245,241,233,.56);
+  text-align: center;
+}
+
+.case-empty-state h2 {
+  margin: 0 0 8px;
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.case-empty-state p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+/* ── Related cases in treatment details ── */
+.related-cases {
+  margin: 24px 22px 6px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-gold);
+}
+
+.related-cases-head h2 {
+  margin: 0 0 12px;
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.related-cases-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.related-case-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--warm-white);
+  cursor: pointer;
+}
+
+.related-case-card .case-comparison { aspect-ratio: 4 / 3; }
+.related-case-title {
+  padding: 9px;
+  font-family: var(--font-serif);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* ── Case detail ── */
+.case-detail-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 420;
+  overflow-y: auto;
+  background: #fbf8f1;
+  transform: translateX(100%);
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  -webkit-overflow-scrolling: touch;
+}
+
+.case-detail-panel.open { transform: translateX(0); }
+.case-detail-panel .panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.case-detail-content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding-bottom: 108px;
+}
+
+.case-detail-heading { padding: 24px 20px 18px; }
+.case-detail-number {
+  margin-bottom: 7px;
+  color: var(--gold);
+  font-size: 10px;
+  letter-spacing: .15em;
+}
+
+.case-detail-heading h1 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.case-detail-type {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-gold);
+  border-radius: 4px;
+  color: var(--gold);
+  font-size: 10px;
+}
+
+.case-detail-pairs { display: grid; gap: 16px; }
+.case-detail-pair { background: var(--paper); }
+.case-detail-pair .case-comparison { aspect-ratio: 4 / 3; }
+.case-pair-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  color: var(--ink-muted);
+  font-size: 10px;
+}
+
+.case-detail-section {
+  margin: 0 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.case-detail-section-label {
+  margin-bottom: 10px;
+  color: var(--gold);
+  font-size: 10px;
+  letter-spacing: .14em;
+}
+
+.case-detail-section p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.case-treatment-links { display: grid; gap: 8px; }
+.case-treatment-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--warm-white);
+  color: var(--ink-soft);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.case-treatment-link::after { content: "›"; color: var(--gold); }
+.case-disclaimer {
+  margin: 18px 20px 0;
+  color: var(--ink-muted);
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.case-action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 430;
+  display: none;
+  padding: 10px 14px max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border-gold);
+  background: var(--warm-white);
+}
+
+.case-action-bar.visible { display: block; }
+.case-consult-btn {
+  width: 100%;
+  min-height: 46px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--teal);
+  color: var(--warm-white);
+  font-family: var(--font-serif);
+  font-size: 14px;
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+
+@media (min-width: 720px) {
+  .case-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .case-detail-pairs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 </style>
 </head>
 <body>
@@ -2010,33 +2528,61 @@ body {
   <div class="header-title">
     <span class="header-logo-dot"></span>艾絲柏美學診所 彰化員林
   </div>
-  <div class="header-actions" aria-hidden="true">
-    <span>⋯</span>
-    <span>×</span>
+</div>
+
+<!-- Primary navigation -->
+<div class="tab-bar primary-tab-bar">
+  <button class="tab-btn active" data-primary-tab="treatments" onclick="switchPrimaryTab('treatments')">療程介紹</button>
+  <button class="tab-btn" data-primary-tab="cases" onclick="switchPrimaryTab('cases')">案例見證</button>
+  <button class="tab-btn" data-primary-tab="doctors" onclick="switchPrimaryTab('doctors')">醫師團隊</button>
+</div>
+
+<!-- View: Treatments -->
+<div class="view active" id="view-treatments">
+  <div class="treatment-subnav" role="tablist" aria-label="療程介紹瀏覽方式">
+    <button class="treatment-subnav-btn active" data-treatment-mode="type" onclick="switchTreatmentMode('type')">依療程類型</button>
+    <button class="treatment-subnav-btn" data-treatment-mode="concern" onclick="switchTreatmentMode('concern')">依困擾選擇</button>
+  </div>
+
+  <div class="treatment-mode-view active" id="view-type">
+    <div class="category-list" id="category-list-type"></div>
+  </div>
+
+  <div class="treatment-mode-view" id="view-concern">
+    <div class="concern-intro">
+      <h2>選擇想改善的關鍵字</h2>
+      <p>用更直覺的方式找到適合療程</p>
+    </div>
+    <div class="concern-selection" id="concern-selection"></div>
+    <div class="concern-grid" id="concern-grid"></div>
+    <div class="concern-recommend" id="concern-recommend"></div>
   </div>
 </div>
 
-<!-- Tab bar -->
-<div class="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('type')">依療程類型</button>
-  <button class="tab-btn" onclick="switchTab('concern')">依困擾選擇</button>
-  <button class="tab-btn" onclick="switchTab('doctors')">醫師團隊</button>
-</div>
-
-<!-- View: Concern -->
-<div class="view" id="view-concern">
-  <div class="concern-intro">
-    <h2>選擇想改善的關鍵字</h2>
-    <p>用更直覺的方式找到適合療程</p>
-  </div>
-  <div class="concern-selection" id="concern-selection"></div>
-  <div class="concern-grid" id="concern-grid"></div>
-  <div class="concern-recommend" id="concern-recommend"></div>
-</div>
-
-<!-- View: By Type -->
-<div class="view active" id="view-type">
-  <div class="category-list" id="category-list-type"></div>
+<!-- View: Cases -->
+<div class="view" id="view-cases">
+  <section class="case-hub">
+    <div class="case-intro">
+      <span class="case-kicker">RESULTS</span>
+      <h1>案例見證</h1>
+      <p>每個人的條件與恢復狀況不同，以下案例僅作療程規劃參考。</p>
+    </div>
+    <div class="case-toolbar">
+      <div class="case-type-filter" id="case-type-filter" aria-label="案例療程數量篩選">
+        <button class="case-type-btn active" data-case-type="all" onclick="setCaseTypeFilter('all')">全部案例</button>
+        <button class="case-type-btn" data-case-type="single" onclick="setCaseTypeFilter('single')">單一療程</button>
+        <button class="case-type-btn" data-case-type="compound" onclick="setCaseTypeFilter('compound')">複合療程</button>
+      </div>
+      <div class="case-filter-actions">
+        <button class="case-filter-toggle" id="case-concern-toggle" onclick="toggleCaseFilter('concern')">改善困擾<span></span></button>
+        <button class="case-filter-toggle" id="case-treatment-toggle" onclick="toggleCaseFilter('treatment')">使用療程<span></span></button>
+      </div>
+      <div class="case-filter-panel" id="case-filter-panel"></div>
+      <div class="case-active-filters" id="case-active-filters"></div>
+    </div>
+    <div class="case-result-summary" id="case-result-summary"></div>
+    <div class="case-grid" id="case-grid"></div>
+  </section>
 </div>
 
 <!-- View: Doctors -->
@@ -2306,6 +2852,13 @@ body {
       <div class="detail-section-label">注意事項</div>
       <div class="detail-section-text" id="detail-notes"></div>
     </div>
+    <section class="related-cases" id="detail-related-cases" hidden>
+      <div class="related-cases-head">
+        <span>RELATED RESULTS</span>
+        <h2>相關案例</h2>
+      </div>
+      <div class="related-cases-list" id="detail-related-cases-list"></div>
+    </section>
   </div>
 </div>
 <div class="detail-action-bar" id="detail-action-bar">
@@ -2313,6 +2866,38 @@ body {
     <button class="detail-add-btn" id="detail-add-btn" onclick="toggleFromDetail()">加入諮詢清單</button>
     <button class="detail-consult-btn" onclick="sendSingleToLine()">立即傳送諮詢</button>
   </div>
+</div>
+
+<!-- Case Detail Panel -->
+<div class="case-detail-panel" id="case-detail-panel">
+  <div class="panel-header">
+    <div class="back-btn" onclick="closeCaseDetail()">←</div>
+    <div class="panel-title" id="case-detail-panel-title">案例見證</div>
+  </div>
+  <div class="case-detail-content">
+    <div class="case-detail-heading">
+      <div class="case-detail-number" id="case-detail-number"></div>
+      <h1 id="case-detail-title"></h1>
+      <div class="case-detail-type" id="case-detail-type"></div>
+    </div>
+    <div class="case-detail-pairs" id="case-detail-pairs"></div>
+    <section class="case-detail-section" id="case-detail-summary-section">
+      <div class="case-detail-section-label">改善重點</div>
+      <p id="case-detail-summary"></p>
+    </section>
+    <section class="case-detail-section">
+      <div class="case-detail-section-label">改善困擾</div>
+      <div class="case-detail-tags" id="case-detail-concerns"></div>
+    </section>
+    <section class="case-detail-section">
+      <div class="case-detail-section-label">使用療程</div>
+      <div class="case-treatment-links" id="case-detail-treatments"></div>
+    </section>
+    <p class="case-disclaimer">療程效果與恢復狀況會因個人條件而異，實際規劃需由醫師評估。</p>
+  </div>
+</div>
+<div class="case-action-bar" id="case-action-bar">
+  <button class="case-consult-btn" onclick="sendCaseToLine()">以此案例諮詢</button>
 </div>
 
 <!-- Bottom action bar -->
@@ -2333,6 +2918,7 @@ body {
   </div>
 </div>
 
+<script src="assets/data/cases-data.js"></script>
 <script>
 // ── Data ──
 const DATA = {
@@ -2347,8 +2933,8 @@ const DATA = {
         {
           name: "全部保養品",
           treatments: [
-            { name: "艾絲柏 全透清透防曬", device: "物理防曬飾底乳", desc: "100% 純物理高係數防曬，兼具防曬、隔離與飾底修飾，適合膚色不均、暗沉與敏感肌日常使用。", tags: ["防曬", "膚色修飾", "暗沉", "膚色均勻", "妝前", "敏感肌"] },
-            { name: "艾絲柏 外泌體術後修復面膜", device: "外泌體面膜保養品", desc: "訊聯外泌體系列片狀面膜，適合日常保濕、舒緩修護與維持肌膚細緻透亮感。", tags: ["面膜", "修護", "保濕", "透亮", "舒緩", "日常保養"] }
+            { id: "aespa_products-17acb5e0", name: "艾絲柏 全透清透防曬", device: "物理防曬飾底乳", desc: "100% 純物理高係數防曬，兼具防曬、隔離與飾底修飾，適合膚色不均、暗沉與敏感肌日常使用。", tags: ["防曬", "膚色修飾", "暗沉", "膚色均勻", "妝前", "敏感肌"] },
+            { id: "aespa_products-1c1602ab", name: "艾絲柏 外泌體術後修復面膜", device: "外泌體面膜保養品", desc: "訊聯外泌體系列片狀面膜，適合日常保濕、舒緩修護與維持肌膚細緻透亮感。", tags: ["面膜", "修護", "保濕", "透亮", "舒緩", "日常保養"] }
           ]
         }
       ]
@@ -2363,9 +2949,9 @@ const DATA = {
         {
           name: "全部療程",
           treatments: [
-            { name: "HydraFacial 海菲秀", device: "HydraFacial", desc: "三步驟深層清潔、去角質、導入精華，改善粉刺及膚況。", tags: ["粉刺", "毛孔阻塞", "深層清潔", "保濕", "膚質粗糙", "透亮"] },
-            { name: "Seyo 水悠無針水光", device: "Seyo", desc: "無針壓力導入玻尿酸，補水保濕、提升緊緻度。", tags: ["保濕", "水嫩", "乾燥", "緊緻", "透亮", "無恢復期"] },
-            { name: "手工清粉刺", device: "深層清潔", desc: "由專業美容師徒手深層清潔，溫和清除粉刺與阻塞，改善毛孔粗大與粗糙膚況。", tags: ["粉刺", "毛孔阻塞", "深層清潔", "痘痘肌", "粗糙", "清爽"] }
+            { id: "hydrafacial", name: "HydraFacial 海菲秀", device: "HydraFacial", desc: "三步驟深層清潔、去角質、導入精華，改善粉刺及膚況。", tags: ["粉刺", "毛孔阻塞", "深層清潔", "保濕", "膚質粗糙", "透亮"] },
+            { id: "seyo", name: "Seyo 水悠無針水光", device: "Seyo", desc: "無針壓力導入玻尿酸，補水保濕、提升緊緻度。", tags: ["保濕", "水嫩", "乾燥", "緊緻", "透亮", "無恢復期"] },
+            { id: "beauty-1db491a1", name: "手工清粉刺", device: "深層清潔", desc: "由專業美容師徒手深層清潔，溫和清除粉刺與阻塞，改善毛孔粗大與粗糙膚況。", tags: ["粉刺", "毛孔阻塞", "深層清潔", "痘痘肌", "粗糙", "清爽"] }
           ]
         }
       ]
@@ -2380,28 +2966,28 @@ const DATA = {
         {
           name: "靜脈雷射",
           treatments: [
-            { name: "OLIB靜脈雷射", device: "OLIB靜脈雷射", desc: "雷射能量透過血管照射，改善血液循環、提升免疫及抗老化。", tags: ["循環", "免疫", "抗老", "代謝", "疲勞", "保養"] }
+            { id: "olib", name: "OLIB靜脈雷射", device: "OLIB靜脈雷射", desc: "雷射能量透過血管照射，改善血液循環、提升免疫及抗老化。", tags: ["循環", "免疫", "抗老", "代謝", "疲勞", "保養"] }
           ]
         },
         {
           name: "血液淨化",
           treatments: [
-            { name: "MCS+血液淨化", device: "血液淨化療程", desc: "透過專業醫療技術清除血液中的代謝廢物、毒素與多餘物質，改善血液品質，促進全身循環與細胞代謝，提升整體健康狀態。", tags: ["血液淨化", "排毒", "循環", "代謝", "慢性疲勞", "全身保養"] }
+            { id: "mcs", name: "MCS+血液淨化", device: "血液淨化療程", desc: "透過專業醫療技術清除血液中的代謝廢物、毒素與多餘物質，改善血液品質，促進全身循環與細胞代謝，提升整體健康狀態。", tags: ["血液淨化", "排毒", "循環", "代謝", "慢性疲勞", "全身保養"] }
           ]
         },
         {
           name: "點滴",
           treatments: [
-            { name: "美白點滴", device: "靜脈注射", desc: "高劑量維他命 C 及傳明酸，由內而外抑制黑色素，改善暗沉。", tags: ["美白", "暗沉", "提亮", "抗氧化", "疲勞", "氣色"] },
-            { name: "消脂點滴", device: "靜脈注射", desc: "促進代謝、輔助脂肪燃燒，搭配生活調整效果更顯著。", tags: ["代謝", "消脂", "水腫", "體重管理", "循環", "輔助瘦身"] },
-            { name: "保肝排毒點滴", device: "靜脈注射", desc: "補充肝臟代謝所需的關鍵營養素，協助排除體內毒素，保護肝細胞並促進肝功能恢復。", tags: ["保肝", "排毒", "解酒", "疲勞", "代謝", "熬夜"] },
-            { name: "酸痛舒緩點滴", device: "靜脈注射", desc: "針對肌肉痠痛、慢性疲勞及神經緊繃，補充消炎止痛及肌肉放鬆相關營養素，快速緩解不適。", tags: ["肌肉痠痛", "慢性疲勞", "緊繃", "舒緩", "放鬆", "疼痛"] },
-            { name: "助眠清心點滴", device: "靜脈注射", desc: "補充調節自律神經與睡眠品質的關鍵成分，改善失眠、焦慮及壓力過大造成的身心緊繃。", tags: ["失眠", "焦慮", "壓力", "放鬆", "助眠", "自律神經"] },
-            { name: "預防感冒點滴", device: "靜脈注射", desc: "高劑量維他命 C 搭配免疫增強營養素，迅速提升免疫防線，預防感冒或加速康復。", tags: ["免疫", "感冒", "疲勞", "修復", "抗氧化", "預防保養"] },
-            { name: "高濃度C點滴", device: "靜脈注射", desc: "高劑量維他命 C 直接透過靜脈注射快速吸收，抗氧化、美白、提升免疫，兼具抗老化與術後修復功效。", tags: ["美白", "抗氧化", "免疫", "術後修復", "疲勞", "提亮"] },
-            { name: "頂級貴婦點滴", device: "靜脈注射", desc: "精選複合式高端營養成分，全方位補充抗老化、美膚、提升活力所需關鍵素材，適合追求全面保養的族群。", tags: ["抗老", "美膚", "活力", "疲勞", "氣色", "全方位保養"] },
-            { name: "術後止痛修復", device: "靜脈注射", desc: "術後專屬配方，快速補充修復所需營養素，減緩術後腫脹與不適，加速傷口癒合與身體恢復。", tags: ["術後疼痛", "消腫", "修復", "傷口癒合", "不適感", "恢復期"] },
-            { name: "止痛針", device: "靜脈注射", desc: "針對急性疼痛或手術後疼痛給予即時緩解，由醫師評估後施打，快速發揮止痛效果。", tags: ["急性疼痛", "術後疼痛", "止痛", "不適感", "即時緩解", "醫師評估"] }
+            { id: "health_type-37ccb433", name: "美白點滴", device: "靜脈注射", desc: "高劑量維他命 C 及傳明酸，由內而外抑制黑色素，改善暗沉。", tags: ["美白", "暗沉", "提亮", "抗氧化", "疲勞", "氣色"] },
+            { id: "health_type-08e48de0", name: "消脂點滴", device: "靜脈注射", desc: "促進代謝、輔助脂肪燃燒，搭配生活調整效果更顯著。", tags: ["代謝", "消脂", "水腫", "體重管理", "循環", "輔助瘦身"] },
+            { id: "health_type-ec2bec7d", name: "保肝排毒點滴", device: "靜脈注射", desc: "補充肝臟代謝所需的關鍵營養素，協助排除體內毒素，保護肝細胞並促進肝功能恢復。", tags: ["保肝", "排毒", "解酒", "疲勞", "代謝", "熬夜"] },
+            { id: "health_type-50cf2de1", name: "酸痛舒緩點滴", device: "靜脈注射", desc: "針對肌肉痠痛、慢性疲勞及神經緊繃，補充消炎止痛及肌肉放鬆相關營養素，快速緩解不適。", tags: ["肌肉痠痛", "慢性疲勞", "緊繃", "舒緩", "放鬆", "疼痛"] },
+            { id: "health_type-c09eb405", name: "助眠清心點滴", device: "靜脈注射", desc: "補充調節自律神經與睡眠品質的關鍵成分，改善失眠、焦慮及壓力過大造成的身心緊繃。", tags: ["失眠", "焦慮", "壓力", "放鬆", "助眠", "自律神經"] },
+            { id: "health_type-2258c104", name: "預防感冒點滴", device: "靜脈注射", desc: "高劑量維他命 C 搭配免疫增強營養素，迅速提升免疫防線，預防感冒或加速康復。", tags: ["免疫", "感冒", "疲勞", "修復", "抗氧化", "預防保養"] },
+            { id: "health_type-b6eb9067", name: "高濃度C點滴", device: "靜脈注射", desc: "高劑量維他命 C 直接透過靜脈注射快速吸收，抗氧化、美白、提升免疫，兼具抗老化與術後修復功效。", tags: ["美白", "抗氧化", "免疫", "術後修復", "疲勞", "提亮"] },
+            { id: "health_type-1dde1350", name: "頂級貴婦點滴", device: "靜脈注射", desc: "精選複合式高端營養成分，全方位補充抗老化、美膚、提升活力所需關鍵素材，適合追求全面保養的族群。", tags: ["抗老", "美膚", "活力", "疲勞", "氣色", "全方位保養"] },
+            { id: "health_type-7dc56211", name: "術後止痛修復", device: "靜脈注射", desc: "術後專屬配方，快速補充修復所需營養素，減緩術後腫脹與不適，加速傷口癒合與身體恢復。", tags: ["術後疼痛", "消腫", "修復", "傷口癒合", "不適感", "恢復期"] },
+            { id: "health_type-9913cc6d", name: "止痛針", device: "靜脈注射", desc: "針對急性疼痛或手術後疼痛給予即時緩解，由醫師評估後施打，快速發揮止痛效果。", tags: ["急性疼痛", "術後疼痛", "止痛", "不適感", "即時緩解", "醫師評估"] }
           ]
         }
       ]
@@ -2416,9 +3002,9 @@ const DATA = {
         {
           name: "全部療程",
           treatments: [
-            { name: "Letybo 韓國保提拉肉毒", device: "肉毒桿菌素", desc: "動態紋（做表情時出現）注射肉毒，放鬆過度收縮的肌肉，預防靜態紋形成。", tags: ["動態紋", "抬頭紋", "皺眉紋", "魚尾紋", "咬肌", "小臉"] },
-            { name: "Dysport 皇家肉毒", device: "肉毒桿菌素", image: "assets/images/dysport.webp", imageAlt: "Dysport 皇家肉毒產品圖片", desc: "英國原廠 A 型肉毒桿菌素，放鬆過度收縮的表情肌與咬肌，改善動態紋並修飾臉部線條。", tags: ["動態紋", "抬頭紋", "皺眉紋", "魚尾紋", "咬肌", "小臉"] },
-            { name: "Xeomin 德國天使肉毒", device: "肉毒桿菌素", desc: "台灣唯一淨化型肉毒，去除複合蛋白與雜質，精準除皺、不易產生抗藥性，適合長期施打者。", tags: ["皺眉紋", "抬頭紋", "魚尾紋", "除皺", "自然感", "長期保養", "動態紋"] }
+            { id: "letybo", name: "Letybo 韓國保提拉肉毒", device: "肉毒桿菌素", desc: "動態紋（做表情時出現）注射肉毒，放鬆過度收縮的肌肉，預防靜態紋形成。", tags: ["動態紋", "抬頭紋", "皺眉紋", "魚尾紋", "咬肌", "小臉"] },
+            { id: "dysport", name: "Dysport 皇家肉毒", device: "肉毒桿菌素", image: "assets/images/dysport.webp", imageAlt: "Dysport 皇家肉毒產品圖片", desc: "英國原廠 A 型肉毒桿菌素，放鬆過度收縮的表情肌與咬肌，改善動態紋並修飾臉部線條。", tags: ["動態紋", "抬頭紋", "皺眉紋", "魚尾紋", "咬肌", "小臉"] },
+            { id: "xeomin", name: "Xeomin 德國天使肉毒", device: "肉毒桿菌素", desc: "台灣唯一淨化型肉毒，去除複合蛋白與雜質，精準除皺、不易產生抗藥性，適合長期施打者。", tags: ["皺眉紋", "抬頭紋", "魚尾紋", "除皺", "自然感", "長期保養", "動態紋"] }
           ]
         }
       ]
@@ -2433,13 +3019,13 @@ const DATA = {
         {
           name: "全部療程",
           treatments: [
-            { name: "PQX 星皮秒雷射", device: "皮秒雷射/蜂巢皮秒", desc: "精準擊碎黑色素，改善毛孔粗大、膚色不均、暗沉。", tags: ["毛孔粗大", "暗沉", "膚色不均", "痘疤", "斑點", "膚質粗糙"] },
-            { name: "Reepot Ai 時光雷射", device: "Reepot Ai", desc: "針對淺層斑（曬斑、雀斑、老人斑），安全有效淡化。", tags: ["曬斑", "雀斑", "老人斑", "斑點", "膚色不均", "暗沉"] },
-            { name: "Red Touch Pro 凍態雷射", device: "Red Touch Pro", desc: "深層作用於肝斑、太田母斑等頑固性色素病灶。", tags: ["肝斑", "深層斑", "色素沉澱", "膚色不均", "頑固斑", "暗沉"] },
-            { name: "海神雷射除毛", device: "海神雷射", desc: "755nm 亞歷山大雷射，針對各膚色安全除毛，效率高、舒適度佳。", tags: ["除毛", "腋下", "手腳毛髮", "私密處", "永久減毛", "清爽"] },
-            { name: "585 黃雷射", device: "585nm 雷射", desc: "585nm 黃雷射針對血管性病灶，改善臉部泛紅、微血管擴張、酒糟、紅痘印及血管瘤。", tags: ["泛紅", "微血管", "酒糟", "紅痘印", "血管瘤", "膚色不均"] },
-            { name: "Dermablate MCL32 鉺雅鉻雷射 除痣", device: "鉺雅鉻雷射", desc: "2940nm 鉺雅鉻雷射精準汽化老廢角質、不平整組織與適合雷射處理的痣，改善凹洞、疤痕、毛孔與膚質粗糙。", tags: ["除痣", "痘疤", "凹洞", "毛孔粗大", "膚質粗糙", "疤痕"] },
-            { name: "Juliet茱麗葉雷射", device: "鉺雅鉻雷射", desc: "以鉺雅鉻雷射進行溫和分段式更新，適合私密保養、乾澀與緊緻需求，需由醫師評估適應性。", tags: ["私密保養", "乾澀", "私密鬆弛", "緊緻", "無恢復期", "自然感"] }
+            { id: "pqx", name: "PQX 星皮秒雷射", device: "皮秒雷射/蜂巢皮秒", desc: "精準擊碎黑色素，改善毛孔粗大、膚色不均、暗沉。", tags: ["毛孔粗大", "暗沉", "膚色不均", "痘疤", "斑點", "膚質粗糙"] },
+            { id: "reepot-ai", name: "Reepot Ai 時光雷射", device: "Reepot Ai", desc: "針對淺層斑（曬斑、雀斑、老人斑），安全有效淡化。", tags: ["曬斑", "雀斑", "老人斑", "斑點", "膚色不均", "暗沉"] },
+            { id: "red-touch-pro", name: "Red Touch Pro 凍態雷射", device: "Red Touch Pro", desc: "深層作用於肝斑、太田母斑等頑固性色素病灶。", tags: ["肝斑", "深層斑", "色素沉澱", "膚色不均", "頑固斑", "暗沉"] },
+            { id: "laser-4c7eeb87", name: "海神雷射除毛", device: "海神雷射", desc: "755nm 亞歷山大雷射，針對各膚色安全除毛，效率高、舒適度佳。", tags: ["除毛", "腋下", "手腳毛髮", "私密處", "永久減毛", "清爽"] },
+            { id: "585", name: "585 黃雷射", device: "585nm 雷射", desc: "585nm 黃雷射針對血管性病灶，改善臉部泛紅、微血管擴張、酒糟、紅痘印及血管瘤。", tags: ["泛紅", "微血管", "酒糟", "紅痘印", "血管瘤", "膚色不均"] },
+            { id: "dermablate-mcl-32", name: "Dermablate MCL32 鉺雅鉻雷射 除痣", device: "鉺雅鉻雷射", desc: "2940nm 鉺雅鉻雷射精準汽化老廢角質、不平整組織與適合雷射處理的痣，改善凹洞、疤痕、毛孔與膚質粗糙。", tags: ["除痣", "痘疤", "凹洞", "毛孔粗大", "膚質粗糙", "疤痕"] },
+            { id: "juliet", name: "Juliet茱麗葉雷射", device: "鉺雅鉻雷射", desc: "以鉺雅鉻雷射進行溫和分段式更新，適合私密保養、乾澀與緊緻需求，需由醫師評估適應性。", tags: ["私密保養", "乾澀", "私密鬆弛", "緊緻", "無恢復期", "自然感"] }
           ]
         }
       ]
@@ -2454,24 +3040,24 @@ const DATA = {
         {
           name: "電波",
           treatments: [
-            { name: "十蓓電波", device: "10THERMA", desc: "單極電波以容積式堆疊加熱作用於真皮層，搭配多尺寸探頭與七段冷噴，改善鬆弛、細紋並緊實輪廓。", tags: ["拉提", "緊緻", "鬆弛", "細紋", "下顎線", "自然感"] },
-            { name: "超玩美電波 Oligio X", device: "Oligio X", desc: "韓國新世代單極電波，GXG 雙模式由淺至深全方位加熱，刺激膠原新生，緊緻拉提撫紋。", tags: ["拉提", "緊緻", "鬆弛", "細紋", "下顎線", "自然感"] },
-            { name: "墨菲斯微針電波", device: "Morpheus8", desc: "微針電波複合技術，改善橘皮組織、妊娠紋及身體疤痕。", tags: ["橘皮", "妊娠紋", "身體疤痕", "鬆弛", "緊緻", "膚質粗糙", "眼周細紋"] },
-            { name: "蝴蝶電波（私密緊緻）", device: "FORMA V 蝴蝶電波", desc: "非侵入式三極電波私密緊緻療程，改善鬆弛、乾燥、輕度漏尿，無需麻醉無恢復期。", tags: ["私密鬆弛", "乾澀", "輕度漏尿", "緊緻", "私密保養", "無恢復期"] }
+            { id: "rf_ultrasound-0bcad2c0", name: "十蓓電波", device: "10THERMA", desc: "單極電波以容積式堆疊加熱作用於真皮層，搭配多尺寸探頭與七段冷噴，改善鬆弛、細紋並緊實輪廓。", tags: ["拉提", "緊緻", "鬆弛", "細紋", "下顎線", "自然感"] },
+            { id: "oligio-x", name: "超玩美電波 Oligio X", device: "Oligio X", desc: "韓國新世代單極電波，GXG 雙模式由淺至深全方位加熱，刺激膠原新生，緊緻拉提撫紋。", tags: ["拉提", "緊緻", "鬆弛", "細紋", "下顎線", "自然感"] },
+            { id: "rf_ultrasound-571a5575", name: "墨菲斯微針電波", device: "Morpheus8", desc: "微針電波複合技術，改善橘皮組織、妊娠紋及身體疤痕。", tags: ["橘皮", "妊娠紋", "身體疤痕", "鬆弛", "緊緻", "膚質粗糙", "眼周細紋"] },
+            { id: "rf_ultrasound-7a78f64d", name: "蝴蝶電波（私密緊緻）", device: "FORMA V 蝴蝶電波", desc: "非侵入式三極電波私密緊緻療程，改善鬆弛、乾燥、輕度漏尿，無需麻醉無恢復期。", tags: ["私密鬆弛", "乾澀", "輕度漏尿", "緊緻", "私密保養", "無恢復期"] }
           ]
         },
         {
           name: "音波",
           treatments: [
-            { name: "美國音波二代（超音波拉皮）", device: "Ultherapy", desc: "HIFU 聚焦超音波，作用筋膜層，深層緊實下臉輪廓。", tags: ["下臉鬆弛", "下顎線", "拉提", "緊緻", "嘴邊肉", "自然感"] },
-            { name: "韓國雙線音波", device: "HIFU 雙線音波", desc: "結合兩種不同深度的聚焦音波能量，同步作用於 SMAS 筋膜層與真皮層，一次達到深層拉提與表層緊緻的雙重效果。", tags: ["拉提", "緊緻", "下臉鬆弛", "嘴邊肉", "輪廓線", "自然感"] }
+            { id: "rf_ultrasound-8ddb5c7e", name: "美國音波二代（超音波拉皮）", device: "Ultherapy", desc: "HIFU 聚焦超音波，作用筋膜層，深層緊實下臉輪廓。", tags: ["下臉鬆弛", "下顎線", "拉提", "緊緻", "嘴邊肉", "自然感"] },
+            { id: "rf_ultrasound-de925bba", name: "韓國雙線音波", device: "HIFU 雙線音波", desc: "結合兩種不同深度的聚焦音波能量，同步作用於 SMAS 筋膜層與真皮層，一次達到深層拉提與表層緊緻的雙重效果。", tags: ["拉提", "緊緻", "下臉鬆弛", "嘴邊肉", "輪廓線", "自然感"] }
           ]
         },
         {
           name: "微波",
           treatments: [
-            { name: "Onda Pro 超微波", device: "Onda Pro", desc: "適用蝴蝶袖、小腹、大腿等局部頑固脂肪，精準溶解。", tags: ["局部脂肪", "小腹", "蝴蝶袖", "大腿", "橘皮", "無恢復期"] },
-            { name: "miraDry 清新微波", device: "miraDry", desc: "非侵入性微波能量永久減少腋下汗腺，解決多汗及狐臭困擾。", tags: ["腋下多汗", "狐臭", "止汗", "異味", "永久", "一勞永逸"] }
+            { id: "onda-pro", name: "Onda Pro 超微波", device: "Onda Pro", desc: "適用蝴蝶袖、小腹、大腿等局部頑固脂肪，精準溶解。", tags: ["局部脂肪", "小腹", "蝴蝶袖", "大腿", "橘皮", "無恢復期"] },
+            { id: "miradry", name: "miraDry 清新微波", device: "miraDry", desc: "非侵入性微波能量永久減少腋下汗腺，解決多汗及狐臭困擾。", tags: ["腋下多汗", "狐臭", "止汗", "異味", "永久", "一勞永逸"] }
           ]
         }
       ]
@@ -2486,11 +3072,11 @@ const DATA = {
         {
           name: "全部療程",
           treatments: [
-            { name: "Doublyx EVO彈力針（液態拉皮）", device: "DOUBLYX EVO 玻尿酸", desc: "高濃度非交聯玻尿酸生物刺激劑，結合 CD44 機轉刺激膠原增生，全臉漸進式拉提緊緻。", tags: ["鬆弛", "緊緻", "拉提", "膚質改善", "自然感", "漸進改善"] },
-            { name: "V50 極濃玻尿酸", device: "V50玻尿酸", desc: "高濃度玻尿酸填補頰凹、夫妻宮及太陽穴，立即恢復飽滿感。", tags: ["頰凹", "夫妻宮", "太陽穴", "下巴", "輪廓塑形", "飽滿感"] },
-            { name: "RDS 再生針+ Belotero保柔緹 仿生玻尿酸 (混合型)", device: "RDS+", desc: "兼顧立即填充與長效膠原刺激，適合需要自然漸進改善者。", tags: ["凹陷", "輪廓支撐", "立即有感", "自然感", "漸進改善", "持久"] },
-            { name: "Belotero保柔緹 仿生玻尿酸", device: "Belotero", desc: "瑞士原廠 CPM 專利技術，質地柔順自然融合肌膚，適合填補細紋、淚溝及淺層補水提亮。", tags: ["細紋", "淚溝", "唇紋", "補水", "自然感", "柔順"] },
-            { name: "Restylane瑞絲朗 OBT 女神動態玻尿酸", device: "Restylane", desc: "瑞典原廠 NASHA/OBT 技術，兼具支撐力與動態自然度，適合輪廓塑形與動態表情自然填充。", tags: ["輪廓塑形", "法令紋", "唇部", "動態表情", "自然感", "飽滿感"] }
+            { id: "doublyx-evo", name: "Doublyx EVO彈力針（液態拉皮）", device: "DOUBLYX EVO 玻尿酸", desc: "高濃度非交聯玻尿酸生物刺激劑，結合 CD44 機轉刺激膠原增生，全臉漸進式拉提緊緻。", tags: ["鬆弛", "緊緻", "拉提", "膚質改善", "自然感", "漸進改善"] },
+            { id: "v-50", name: "V50 極濃玻尿酸", device: "V50玻尿酸", desc: "高濃度玻尿酸填補頰凹、夫妻宮及太陽穴，立即恢復飽滿感。", tags: ["頰凹", "夫妻宮", "太陽穴", "下巴", "輪廓塑形", "飽滿感"] },
+            { id: "rds-belotero", name: "RDS 再生針+ Belotero保柔緹 仿生玻尿酸 (混合型)", device: "RDS+", desc: "兼顧立即填充與長效膠原刺激，適合需要自然漸進改善者。", tags: ["凹陷", "輪廓支撐", "立即有感", "自然感", "漸進改善", "持久"] },
+            { id: "belotero", name: "Belotero保柔緹 仿生玻尿酸", device: "Belotero", desc: "瑞士原廠 CPM 專利技術，質地柔順自然融合肌膚，適合填補細紋、淚溝及淺層補水提亮。", tags: ["細紋", "淚溝", "唇紋", "補水", "自然感", "柔順"] },
+            { id: "restylane-obt", name: "Restylane瑞絲朗 OBT 女神動態玻尿酸", device: "Restylane", desc: "瑞典原廠 NASHA/OBT 技術，兼具支撐力與動態自然度，適合輪廓塑形與動態表情自然填充。", tags: ["輪廓塑形", "法令紋", "唇部", "動態表情", "自然感", "飽滿感"] }
           ]
         }
       ]
@@ -2505,9 +3091,9 @@ const DATA = {
         {
           name: "全部療程",
           treatments: [
-            { name: "Radiesse 再生針", device: "CaHA 微晶瓷", desc: "微晶瓷成分立即填充支撐，同時長效刺激自體膠原與彈力蛋白新生，改善鬆弛、輪廓凹陷及膚質。", tags: ["鬆弛", "輪廓凹陷", "法令紋", "膚質改善", "自然感", "持久"] },
-            { name: "Juvelook 喬雅露", device: "PDLLA 聚雙旋乳酸", desc: "結合 PDLLA 膠原增生與少量玻尿酸，溫和刺激膠原新生，改善膚質、細紋與凹陷，效果自然漸進。", tags: ["毛孔粗大", "細紋", "痘疤", "凹陷", "膚質改善", "自然感"] },
-            { name: "Ellansé 洢蓮絲", device: "PCL 膠原增生劑", desc: "填充同時長效刺激膠原，雙重效果維持長達 2 年以上。", tags: ["凹陷", "輪廓支撐", "法令紋", "自然感", "持久", "漸進改善"] }
+            { id: "radiesse", name: "Radiesse 再生針", device: "CaHA 微晶瓷", desc: "微晶瓷成分立即填充支撐，同時長效刺激自體膠原與彈力蛋白新生，改善鬆弛、輪廓凹陷及膚質。", tags: ["鬆弛", "輪廓凹陷", "法令紋", "膚質改善", "自然感", "持久"] },
+            { id: "juvelook", name: "Juvelook 喬雅露", device: "PDLLA 聚雙旋乳酸", desc: "結合 PDLLA 膠原增生與少量玻尿酸，溫和刺激膠原新生，改善膚質、細紋與凹陷，效果自然漸進。", tags: ["毛孔粗大", "細紋", "痘疤", "凹陷", "膚質改善", "自然感"] },
+            { id: "ellanse", name: "Ellansé 洢蓮絲", device: "PCL 膠原增生劑", desc: "填充同時長效刺激膠原，雙重效果維持長達 2 年以上。", tags: ["凹陷", "輪廓支撐", "法令紋", "自然感", "持久", "漸進改善"] }
           ]
         }
       ]
@@ -2522,8 +3108,8 @@ const DATA = {
         {
           name: "全部療程",
           treatments: [
-            { name: "膠原蛋白 熊貓針", device: "膠原蛋白注射", desc: "以膠原蛋白精準注射於眼周淚溝，改善凹陷、黑眼圈及細紋，質地輕盈自然，不易顯浮腫。", tags: ["淚溝", "黑眼圈", "眼周凹陷", "眼周細紋", "不易浮腫", "自然感"] },
-            { name: "双美 膚漾美 G4白金針", device: "膠原蛋白注射", desc: "第四代膠原蛋白植入劑，適合填補真皮至深層缺陷，改善法令紋、輪廓凹陷與眼周老化。", tags: ["法令紋", "輪廓凹陷", "淚溝", "黑眼圈", "自然感", "持久"] }
+            { id: "collagen_filler-9782df55", name: "膠原蛋白 熊貓針", device: "膠原蛋白注射", desc: "以膠原蛋白精準注射於眼周淚溝，改善凹陷、黑眼圈及細紋，質地輕盈自然，不易顯浮腫。", tags: ["淚溝", "黑眼圈", "眼周凹陷", "眼周細紋", "不易浮腫", "自然感"] },
+            { id: "g-4", name: "双美 膚漾美 G4白金針", device: "膠原蛋白注射", desc: "第四代膠原蛋白植入劑，適合填補真皮至深層缺陷，改善法令紋、輪廓凹陷與眼周老化。", tags: ["法令紋", "輪廓凹陷", "淚溝", "黑眼圈", "自然感", "持久"] }
           ]
         }
       ]
@@ -2538,9 +3124,9 @@ const DATA = {
         {
           name: "全部療程",
           treatments: [
-            { name: "Belotero Revive 水柔素妍針 水光", device: "手打水光", desc: "手工注射玻尿酸水光，補充真皮層水分、提亮膚色。", tags: ["保濕", "水嫩", "提亮", "乾燥", "細紋", "自然感"] },
-            { name: "Derma Pen 得美微針筆", device: "Derma Pen", desc: "微針導入，刺激膠原新生，改善痘疤凹洞及細紋。", tags: ["痘疤", "凹洞", "毛孔粗大", "細紋", "膚質粗糙", "修復"] },
-            { name: "Dermashine Pro 德瑪莎", device: "水光注射系統", desc: "負壓多針水光注射系統，將玻尿酸等導入淺層皮下，改善乾燥、暗沉與細紋。", tags: ["保濕", "水嫩", "乾燥", "細紋", "暗沉", "膚質改善"] }
+            { id: "belotero-revive", name: "Belotero Revive 水柔素妍針 水光", device: "手打水光", desc: "手工注射玻尿酸水光，補充真皮層水分、提亮膚色。", tags: ["保濕", "水嫩", "提亮", "乾燥", "細紋", "自然感"] },
+            { id: "derma-pen", name: "Derma Pen 得美微針筆", device: "Derma Pen", desc: "微針導入，刺激膠原新生，改善痘疤凹洞及細紋。", tags: ["痘疤", "凹洞", "毛孔粗大", "細紋", "膚質粗糙", "修復"] },
+            { id: "dermashine-pro", name: "Dermashine Pro 德瑪莎", device: "水光注射系統", desc: "負壓多針水光注射系統，將玻尿酸等導入淺層皮下，改善乾燥、暗沉與細紋。", tags: ["保濕", "水嫩", "乾燥", "細紋", "暗沉", "膚質改善"] }
           ]
         }
       ]
@@ -2555,10 +3141,10 @@ const DATA = {
         {
           name: "全部療程",
           treatments: [
-            { name: "藍鑽魚骨線", device: "PDS 魚骨埋線", desc: "採用可吸收 PDS 聚二氧六環酮魚骨倒鉤線材，植入皮下後立即固定鬆垮組織，同步刺激膠原增生，拉提效果更持久自然。", tags: ["臉部下垂", "嘴邊肉", "法令紋", "下顎線", "拉提", "持久"] },
-            { name: "MINT秘特拉提線", device: "PDO 埋線", desc: "可吸收線材植入真皮層，提拉同時刺激膠原新生，改善凹陷與鬆垮。", tags: ["臉部下垂", "嘴邊肉", "法令紋", "木偶紋", "下顎線", "拉提"] },
-            { name: "鼻雕埋線", device: "鼻部埋線", desc: "以可吸收線材針對鼻樑、山根與鼻尖進行支撐塑形，適合希望免開刀改善鼻型立體感者。", tags: ["山根", "鼻樑", "鼻尖", "鼻型", "立體感", "自然感"] },
-            { name: "METEORA美特拉", device: "拉提線", desc: "國產可吸收拉提線材，植入後提供即時固定與支撐，並刺激膠原新生改善中下臉鬆弛。", tags: ["臉部下垂", "嘴邊肉", "法令紋", "下顎線", "拉提", "自然感"] }
+            { id: "thread-cb7955e0", name: "藍鑽魚骨線", device: "PDS 魚骨埋線", desc: "採用可吸收 PDS 聚二氧六環酮魚骨倒鉤線材，植入皮下後立即固定鬆垮組織，同步刺激膠原增生，拉提效果更持久自然。", tags: ["臉部下垂", "嘴邊肉", "法令紋", "下顎線", "拉提", "持久"] },
+            { id: "mint", name: "MINT秘特拉提線", device: "PDO 埋線", desc: "可吸收線材植入真皮層，提拉同時刺激膠原新生，改善凹陷與鬆垮。", tags: ["臉部下垂", "嘴邊肉", "法令紋", "木偶紋", "下顎線", "拉提"] },
+            { id: "thread-981c3b66", name: "鼻雕埋線", device: "鼻部埋線", desc: "以可吸收線材針對鼻樑、山根與鼻尖進行支撐塑形，適合希望免開刀改善鼻型立體感者。", tags: ["山根", "鼻樑", "鼻尖", "鼻型", "立體感", "自然感"] },
+            { id: "meteora", name: "METEORA美特拉", device: "拉提線", desc: "國產可吸收拉提線材，植入後提供即時固定與支撐，並刺激膠原新生改善中下臉鬆弛。", tags: ["臉部下垂", "嘴邊肉", "法令紋", "下顎線", "拉提", "自然感"] }
           ]
         }
       ]
@@ -2573,33 +3159,33 @@ const DATA = {
         {
           name: "全部療程",
           treatments: [
-            { name: "眼袋手術", device: "手術", desc: "去除眼袋脂肪及多餘皮膚，一勞永逸解決眼袋問題。", tags: ["眼袋", "眼周鬆弛", "疲憊感", "脂肪凸出", "一勞永逸", "眼整形"] },
-            { name: "縫/割雙眼皮", device: "眼整形手術", desc: "依眼皮厚度、脂肪量與期待摺痕規劃縫合法或切開法，打造自然穩定的雙眼皮線條。", tags: ["雙眼皮", "內雙", "單眼皮", "眼型", "摺痕設計", "自然感"] },
-            { name: "提眼瞼肌", device: "眼整形手術", desc: "改善提眼瞼肌力量不足造成的眼神無力、大小眼或睜眼費力，讓眼睛更有精神。", tags: ["眼瞼下垂", "睜眼無力", "無神眼", "大小眼", "抬眉", "有精神"] },
-            { name: "假體隆乳手術", device: "整形外科手術", desc: "依胸型條件與期待效果規劃乳房假體隆乳，改善胸部大小、形狀與比例。", tags: ["胸型", "上胸飽滿", "胸部大小", "左右不對稱", "身形比例", "持久"] },
-            { name: "自體脂肪隆乳手術", device: "整形外科手術", desc: "抽取自身脂肪純化後回填胸部，同時修飾取脂部位線條，打造自然柔和胸型。", tags: ["自然感", "胸型", "補脂", "抽脂", "柔軟觸感", "身形比例"] },
-            { name: "抽脂手術", device: "整形外科手術", desc: "針對局部脂肪堆積進行脂肪抽吸與線條雕塑，改善腹部、腰側、手臂或大腿等部位。", tags: ["局部脂肪", "腹部", "腰側", "手臂", "大腿", "體雕"] }
+            { id: "surgery-527c6a5b", name: "眼袋手術", device: "手術", desc: "去除眼袋脂肪及多餘皮膚，一勞永逸解決眼袋問題。", tags: ["眼袋", "眼周鬆弛", "疲憊感", "脂肪凸出", "一勞永逸", "眼整形"] },
+            { id: "surgery-b462d42c", name: "縫/割雙眼皮", device: "眼整形手術", desc: "依眼皮厚度、脂肪量與期待摺痕規劃縫合法或切開法，打造自然穩定的雙眼皮線條。", tags: ["雙眼皮", "內雙", "單眼皮", "眼型", "摺痕設計", "自然感"] },
+            { id: "surgery-933f9943", name: "提眼瞼肌", device: "眼整形手術", desc: "改善提眼瞼肌力量不足造成的眼神無力、大小眼或睜眼費力，讓眼睛更有精神。", tags: ["眼瞼下垂", "睜眼無力", "無神眼", "大小眼", "抬眉", "有精神"] },
+            { id: "surgery-edc4af13", name: "假體隆乳手術", device: "整形外科手術", desc: "依胸型條件與期待效果規劃乳房假體隆乳，改善胸部大小、形狀與比例。", tags: ["胸型", "上胸飽滿", "胸部大小", "左右不對稱", "身形比例", "持久"] },
+            { id: "surgery-8d97f4ec", name: "自體脂肪隆乳手術", device: "整形外科手術", desc: "抽取自身脂肪純化後回填胸部，同時修飾取脂部位線條，打造自然柔和胸型。", tags: ["自然感", "胸型", "補脂", "抽脂", "柔軟觸感", "身形比例"] },
+            { id: "surgery-7c212b97", name: "抽脂手術", device: "整形外科手術", desc: "針對局部脂肪堆積進行脂肪抽吸與線條雕塑，改善腹部、腰側、手臂或大腿等部位。", tags: ["局部脂肪", "腹部", "腰側", "手臂", "大腿", "體雕"] }
           ]
         },
         {
           name: "眼整形",
           treatments: [
-            { name: "眼袋手術", device: "手術", desc: "去除眼袋脂肪及多餘皮膚，一勞永逸解決眼袋問題。", tags: ["眼袋", "眼周鬆弛", "疲憊感", "脂肪凸出", "一勞永逸", "眼整形"] },
-            { name: "縫/割雙眼皮", device: "眼整形手術", desc: "依眼皮厚度、脂肪量與期待摺痕規劃縫合法或切開法，打造自然穩定的雙眼皮線條。", tags: ["雙眼皮", "內雙", "單眼皮", "眼型", "摺痕設計", "自然感"] },
-            { name: "提眼瞼肌", device: "眼整形手術", desc: "改善提眼瞼肌力量不足造成的眼神無力、大小眼或睜眼費力，讓眼睛更有精神。", tags: ["眼瞼下垂", "睜眼無力", "無神眼", "大小眼", "抬眉", "有精神"] }
+            { id: "surgery-527c6a5b", name: "眼袋手術", device: "手術", desc: "去除眼袋脂肪及多餘皮膚，一勞永逸解決眼袋問題。", tags: ["眼袋", "眼周鬆弛", "疲憊感", "脂肪凸出", "一勞永逸", "眼整形"] },
+            { id: "surgery-b462d42c", name: "縫/割雙眼皮", device: "眼整形手術", desc: "依眼皮厚度、脂肪量與期待摺痕規劃縫合法或切開法，打造自然穩定的雙眼皮線條。", tags: ["雙眼皮", "內雙", "單眼皮", "眼型", "摺痕設計", "自然感"] },
+            { id: "surgery-933f9943", name: "提眼瞼肌", device: "眼整形手術", desc: "改善提眼瞼肌力量不足造成的眼神無力、大小眼或睜眼費力，讓眼睛更有精神。", tags: ["眼瞼下垂", "睜眼無力", "無神眼", "大小眼", "抬眉", "有精神"] }
           ]
         },
         {
           name: "假體",
           treatments: [
-            { name: "假體隆乳手術", device: "整形外科手術", desc: "依胸型條件與期待效果規劃乳房假體隆乳，改善胸部大小、形狀與比例。", tags: ["胸型", "上胸飽滿", "胸部大小", "左右不對稱", "身形比例", "持久"] }
+            { id: "surgery-edc4af13", name: "假體隆乳手術", device: "整形外科手術", desc: "依胸型條件與期待效果規劃乳房假體隆乳，改善胸部大小、形狀與比例。", tags: ["胸型", "上胸飽滿", "胸部大小", "左右不對稱", "身形比例", "持久"] }
           ]
         },
         {
           name: "抽/補脂",
           treatments: [
-            { name: "自體脂肪隆乳手術", device: "整形外科手術", desc: "抽取自身脂肪純化後回填胸部，同時修飾取脂部位線條，打造自然柔和胸型。", tags: ["自然感", "胸型", "補脂", "抽脂", "柔軟觸感", "身形比例"] },
-            { name: "抽脂手術", device: "整形外科手術", desc: "針對局部脂肪堆積進行脂肪抽吸與線條雕塑，改善腹部、腰側、手臂或大腿等部位。", tags: ["局部脂肪", "腹部", "腰側", "手臂", "大腿", "體雕"] }
+            { id: "surgery-8d97f4ec", name: "自體脂肪隆乳手術", device: "整形外科手術", desc: "抽取自身脂肪純化後回填胸部，同時修飾取脂部位線條，打造自然柔和胸型。", tags: ["自然感", "胸型", "補脂", "抽脂", "柔軟觸感", "身形比例"] },
+            { id: "surgery-7c212b97", name: "抽脂手術", device: "整形外科手術", desc: "針對局部脂肪堆積進行脂肪抽吸與線條雕塑，改善腹部、腰側、手臂或大腿等部位。", tags: ["局部脂肪", "腹部", "腰側", "手臂", "大腿", "體雕"] }
           ]
         }
       ]
@@ -2614,13 +3200,13 @@ const DATA = {
         {
           name: "育髮",
           treatments: [
-            { name: "DermaPen + 訊聯 ExoCake外泌體 育髮", device: "頭皮微針導入", desc: "以微針刺激頭皮與髮根區域，搭配育髮精華導入，協助頭皮養護、強健髮根，改善髮量稀疏與落髮困擾。", tags: ["髮量稀疏", "落髮", "頭皮養護", "髮根強健", "秀髮豐盈", "自然感"] }
+            { id: "dermapen-exocake", name: "DermaPen + 訊聯 ExoCake外泌體 育髮", device: "頭皮微針導入", desc: "以微針刺激頭皮與髮根區域，搭配育髮精華導入，協助頭皮養護、強健髮根，改善髮量稀疏與落髮困擾。", tags: ["髮量稀疏", "落髮", "頭皮養護", "髮根強健", "秀髮豐盈", "自然感"] }
           ]
         },
         {
           name: "體重管理",
           treatments: [
-            { name: "猛健樂瘦瘦筆", device: "GLP-1 類似物", desc: "藥物輔助體重管理，需醫師評估後使用，搭配飲食調整效果更佳。", tags: ["體重管理", "食慾控制", "全身瘦身", "肥胖", "過重", "醫師評估"] }
+            { id: "hair_weight-d6c5a373", name: "猛健樂瘦瘦筆", device: "GLP-1 類似物", desc: "藥物輔助體重管理，需醫師評估後使用，搭配飲食調整效果更佳。", tags: ["體重管理", "食慾控制", "全身瘦身", "肥胖", "過重", "醫師評估"] }
           ]
         }
       ]
@@ -2635,43 +3221,43 @@ const DATA = {
         {
           name: "防曬",
           treatments: [
-            { name: "肌膚解密 絲綢UV水凝乳 SPF50+", device: "防曬保養品", desc: "SPF50+ 高係數日常防護，採日本三相乳化技術打造清爽水凝乳質地，柔滑好推、不泛油光，適合妝前打底與身臉使用。", tags: ["防曬", "清爽", "妝前", "保濕", "敏感肌", "自然感"] },
-            { name: "肌膚解密 Rosé Peptide Glow SPF50 潤色防曬凝膠", device: "潤色防曬凝膠", desc: "添加四胜肽與玫瑰精油的涼感凝膠防曬，兼具高係數防護、妝前亮顏與自然潤色。", tags: ["防曬", "潤色", "提亮", "妝前", "膚色均勻", "清爽"] }
+            { id: "uv-spf-50", name: "肌膚解密 絲綢UV水凝乳 SPF50+", device: "防曬保養品", desc: "SPF50+ 高係數日常防護，採日本三相乳化技術打造清爽水凝乳質地，柔滑好推、不泛油光，適合妝前打底與身臉使用。", tags: ["防曬", "清爽", "妝前", "保濕", "敏感肌", "自然感"] },
+            { id: "rose-peptide-glow-spf-50", name: "肌膚解密 Rosé Peptide Glow SPF50 潤色防曬凝膠", device: "潤色防曬凝膠", desc: "添加四胜肽與玫瑰精油的涼感凝膠防曬，兼具高係數防護、妝前亮顏與自然潤色。", tags: ["防曬", "潤色", "提亮", "妝前", "膚色均勻", "清爽"] }
           ]
         },
         {
           name: "清潔",
           treatments: [
-            { name: "Bio Renewal貝兒妮 高效卸潔蜜", device: "洗卸二合一保養品", desc: "深層清潔、卸妝與洗臉二合一，同時幫助保濕與舒緩肌膚，敏感肌也可評估使用。", tags: ["卸妝", "洗臉", "清潔", "保濕", "敏感肌", "日常保養"] },
-            { name: "Bio Renewal貝兒妮 胺基酸純淨洗面乳", device: "潔面保養品", desc: "溫和洗淨毛孔並平衡油脂分泌，適合毛孔粗大、混合性與油性肌膚日常清潔。", tags: ["洗臉", "清潔", "毛孔粗大", "油脂旺盛", "混合肌", "日常保養"] }
+            { id: "bio-renewal", name: "Bio Renewal貝兒妮 高效卸潔蜜", device: "洗卸二合一保養品", desc: "深層清潔、卸妝與洗臉二合一，同時幫助保濕與舒緩肌膚，敏感肌也可評估使用。", tags: ["卸妝", "洗臉", "清潔", "保濕", "敏感肌", "日常保養"] },
+            { id: "bio-renewal-35eb15", name: "Bio Renewal貝兒妮 胺基酸純淨洗面乳", device: "潔面保養品", desc: "溫和洗淨毛孔並平衡油脂分泌，適合毛孔粗大、混合性與油性肌膚日常清潔。", tags: ["洗臉", "清潔", "毛孔粗大", "油脂旺盛", "混合肌", "日常保養"] }
           ]
         },
         {
           name: "精華修護",
           treatments: [
-            { name: "肌膚解密 EK積雪草童妍精華", device: "輕盈保濕精華油", desc: "無香精輕盈保濕臉部精華油，適合一般、乾性與敏感肌膚，協助維持柔嫩、水潤與穩定膚況。", tags: ["保濕", "乾燥", "敏感肌", "柔嫩", "穩定膚況", "日常保養"] },
-            { name: "Bio Renewal貝兒妮 蝸牛修護凝膠", device: "修護凝膠保養品", desc: "萃取南美洲螺旋蝸牛腺體分泌物，幫助維持肌膚水分、預防乾裂並舒緩不適。", tags: ["修護", "保濕", "乾燥", "敏感肌", "舒緩", "日常保養"] },
-            { name: "Bio Renewal貝兒妮 皇家蜂萃精華油", device: "滋養精華油", desc: "主打淨白、光滑與細緻膚觸，適合乾燥缺水、細紋老化、毛孔粗大與缺乏彈性的肌膚。", tags: ["乾燥", "細紋", "毛孔粗大", "彈性", "光滑", "日常保養"] },
-            { name: "Bio Renewal貝兒妮 14% AzA精華乳", device: "精華乳保養品", desc: "14% 高濃度壬二酸精華乳，適合粉刺、痘痘、油脂旺盛與痘疤色素沉澱肌膚日常調理。", tags: ["粉刺", "痘痘", "油脂旺盛", "毛孔粗大", "痘疤", "日常保養"] },
-            { name: "Bio Renewal貝兒妮 超能量肌底精萃", device: "肌底精華保養品", desc: "全能型修護精華，協助維持肌膚微生物群平衡，長效保濕、柔軟肌膚並強化肌膚防禦力。", tags: ["穩定膚況", "保濕", "敏感肌", "乾燥", "油痘肌", "日常保養"] }
+            { id: "skincare_products-c1b69470", name: "肌膚解密 EK積雪草童妍精華", device: "輕盈保濕精華油", desc: "無香精輕盈保濕臉部精華油，適合一般、乾性與敏感肌膚，協助維持柔嫩、水潤與穩定膚況。", tags: ["保濕", "乾燥", "敏感肌", "柔嫩", "穩定膚況", "日常保養"] },
+            { id: "bio-renewal-8b097f", name: "Bio Renewal貝兒妮 蝸牛修護凝膠", device: "修護凝膠保養品", desc: "萃取南美洲螺旋蝸牛腺體分泌物，幫助維持肌膚水分、預防乾裂並舒緩不適。", tags: ["修護", "保濕", "乾燥", "敏感肌", "舒緩", "日常保養"] },
+            { id: "bio-renewal-330aeb", name: "Bio Renewal貝兒妮 皇家蜂萃精華油", device: "滋養精華油", desc: "主打淨白、光滑與細緻膚觸，適合乾燥缺水、細紋老化、毛孔粗大與缺乏彈性的肌膚。", tags: ["乾燥", "細紋", "毛孔粗大", "彈性", "光滑", "日常保養"] },
+            { id: "bio-renewal-14-aza", name: "Bio Renewal貝兒妮 14% AzA精華乳", device: "精華乳保養品", desc: "14% 高濃度壬二酸精華乳，適合粉刺、痘痘、油脂旺盛與痘疤色素沉澱肌膚日常調理。", tags: ["粉刺", "痘痘", "油脂旺盛", "毛孔粗大", "痘疤", "日常保養"] },
+            { id: "bio-renewal-5f32b2", name: "Bio Renewal貝兒妮 超能量肌底精萃", device: "肌底精華保養品", desc: "全能型修護精華，協助維持肌膚微生物群平衡，長效保濕、柔軟肌膚並強化肌膚防禦力。", tags: ["穩定膚況", "保濕", "敏感肌", "乾燥", "油痘肌", "日常保養"] }
           ]
         },
         {
           name: "面膜",
           treatments: [
-            { name: "Bio Renewal貝兒妮 3D積雪草蝸牛專業面膜", device: "修護面膜", desc: "添加積雪草精華，搭配蝸牛黏液萃取與隱形蠶絲面膜材質，適合日常保濕、舒緩修護與專業護理後保養。", tags: ["面膜", "修護", "保濕", "舒緩", "敏感肌", "日常保養"] }
+            { id: "bio-renewal-3-d", name: "Bio Renewal貝兒妮 3D積雪草蝸牛專業面膜", device: "修護面膜", desc: "添加積雪草精華，搭配蝸牛黏液萃取與隱形蠶絲面膜材質，適合日常保濕、舒緩修護與專業護理後保養。", tags: ["面膜", "修護", "保濕", "舒緩", "敏感肌", "日常保養"] }
           ]
         },
         {
           name: "唇部保養",
           treatments: [
-            { name: "Teoxane 3D澎唇精華 玻尿酸護唇膏", device: "唇部精華保養品", desc: "TEOXANE 3D 豐盈水嫩唇部精華，結合透明質酸、膠原蛋白微球與冰涼金屬按摩頭，改善乾紋粗糙並提升唇部水潤豐盈感。", tags: ["唇部保養", "保濕", "乾燥", "唇紋", "柔嫩", "豐盈"] }
+            { id: "teoxane-3-d", name: "Teoxane 3D澎唇精華 玻尿酸護唇膏", device: "唇部精華保養品", desc: "TEOXANE 3D 豐盈水嫩唇部精華，結合透明質酸、膠原蛋白微球與冰涼金屬按摩頭，改善乾紋粗糙並提升唇部水潤豐盈感。", tags: ["唇部保養", "保濕", "乾燥", "唇紋", "柔嫩", "豐盈"] }
           ]
         },
         {
           name: "頭皮保養",
           treatments: [
-            { name: "訊聯 外泌體養蘊萌髮精華", device: "頭皮養護保養品", desc: "訊聯專利外泌體結合中草藥複方與頭皮防護配方，滋養頭皮、維持健康頭皮環境，強健髮絲並使秀髮看起來豐盈濃密。", tags: ["髮量稀疏", "落髮", "頭皮養護", "髮根強健", "秀髮豐盈", "自然感"] }
+            { id: "skincare_products-66aa6c17", name: "訊聯 外泌體養蘊萌髮精華", device: "頭皮養護保養品", desc: "訊聯專利外泌體結合中草藥複方與頭皮防護配方，滋養頭皮、維持健康頭皮環境，強健髮絲並使秀髮看起來豐盈濃密。", tags: ["髮量稀疏", "落髮", "頭皮養護", "髮根強健", "秀髮豐盈", "自然感"] }
           ]
         }
       ]
@@ -2700,6 +3286,15 @@ let currentPanelCat = null;
 let selectedConcernKeywords = new Set();
 let isActionDrawerOpen = false;
 let treatmentSearchQuery = "";
+let currentPrimaryTab = "treatments";
+let currentTreatmentMode = "type";
+let currentCaseId = null;
+let openCaseFilterPanel = null;
+let caseTypeFilter = "all";
+let selectedCaseConcerns = new Set();
+let selectedCaseTreatments = new Set();
+let caseDataState = "idle";
+let caseDataError = "";
 
 // ── Detail content map ──
 const DETAIL_MAP = {
@@ -3630,6 +4225,225 @@ function escapeText(value) {
 function init() {
   renderConcernGrid();
   renderTypeList();
+  renderCases();
+  refreshCasesFromSupabase();
+}
+
+async function refreshCasesFromSupabase() {
+  if (!window.CaseRepository || !window.CaseRepository.configured) return;
+  caseDataState = "loading";
+  caseDataError = "";
+  renderCases();
+  try {
+    const result = await window.CaseRepository.loadPublishedCases();
+    if (result && Array.isArray(result.cases)) window.CASE_DATA = result.cases;
+    caseDataState = "ready";
+  } catch (error) {
+    console.error("Unable to load published cases", error);
+    caseDataState = "error";
+    caseDataError = "案例暫時無法載入，請稍後再試。";
+  }
+  renderCases();
+  if (currentDetailKey) {
+    const treatment = getAllTreatments().find(item => item.name === currentDetailKey);
+    if (treatment) renderRelatedCasesForTreatment(treatment.id);
+  }
+}
+
+// ── Case data and gallery ──
+function getTreatmentById(id) {
+  if (!id) return null;
+  for (const cat of DATA.categories) {
+    for (const sc of cat.subcategories) {
+      const treatment = sc.treatments.find(item => item.id === id);
+      if (treatment) return treatment;
+    }
+  }
+  return null;
+}
+
+function isCompleteCasePair(pair) {
+  return Boolean(pair && pair.before && pair.before.src && pair.after && pair.after.src);
+}
+
+function getPublishedCases() {
+  const cases = Array.isArray(window.CASE_DATA) ? window.CASE_DATA : [];
+  return cases
+    .filter(item => item && item.status === "published" && item.consentConfirmed === true)
+    .filter(item => Array.isArray(item.treatmentIds) && item.treatmentIds.some(id => getTreatmentById(id)))
+    .filter(item => Array.isArray(item.beforeAfterPairs) && item.beforeAfterPairs.some(isCompleteCasePair))
+    .sort((a, b) => (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER) || String(a.id).localeCompare(String(b.id)));
+}
+
+function getCaseById(id) {
+  return getPublishedCases().find(item => item.id === id) || null;
+}
+
+function getCaseTreatments(caseItem) {
+  return (caseItem.treatmentIds || []).map(getTreatmentById).filter(Boolean);
+}
+
+function getCaseType(caseItem) {
+  return new Set((caseItem.treatmentIds || []).filter(id => getTreatmentById(id))).size > 1 ? "compound" : "single";
+}
+
+function getCaseFilterOptions(kind) {
+  const cases = getPublishedCases();
+  if (kind === "concern") {
+    return [...new Set(cases.flatMap(item => item.concernTags || []))].sort((a, b) => a.localeCompare(b, "zh-Hant"));
+  }
+  return [...new Set(cases.flatMap(item => item.treatmentIds || []))]
+    .map(getTreatmentById)
+    .filter(Boolean)
+    .sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
+}
+
+function getFilteredCases() {
+  return getPublishedCases().filter(item => {
+    const typeMatches = caseTypeFilter === "all" || getCaseType(item) === caseTypeFilter;
+    const concerns = item.concernTags || [];
+    const concernMatches = !selectedCaseConcerns.size || concerns.some(tag => selectedCaseConcerns.has(tag));
+    const treatmentMatches = !selectedCaseTreatments.size || (item.treatmentIds || []).some(id => selectedCaseTreatments.has(id));
+    return typeMatches && concernMatches && treatmentMatches;
+  });
+}
+
+function setCaseTypeFilter(type) {
+  caseTypeFilter = type;
+  document.querySelectorAll(".case-type-btn").forEach(button => {
+    button.classList.toggle("active", button.dataset.caseType === type);
+  });
+  renderCases();
+}
+
+function toggleCaseFilter(kind) {
+  openCaseFilterPanel = openCaseFilterPanel === kind ? null : kind;
+  renderCaseFilterPanel();
+}
+
+function toggleCaseFilterOption(kind, value) {
+  const selected = kind === "concern" ? selectedCaseConcerns : selectedCaseTreatments;
+  if (selected.has(value)) selected.delete(value);
+  else selected.add(value);
+  renderCases();
+  renderCaseFilterPanel();
+}
+
+function clearCaseFilters() {
+  caseTypeFilter = "all";
+  selectedCaseConcerns.clear();
+  selectedCaseTreatments.clear();
+  openCaseFilterPanel = null;
+  document.querySelectorAll(".case-type-btn").forEach(button => {
+    button.classList.toggle("active", button.dataset.caseType === "all");
+  });
+  renderCases();
+}
+
+function renderCaseFilterPanel() {
+  const panel = document.getElementById("case-filter-panel");
+  const concernToggle = document.getElementById("case-concern-toggle");
+  const treatmentToggle = document.getElementById("case-treatment-toggle");
+  concernToggle.classList.toggle("active", openCaseFilterPanel === "concern");
+  treatmentToggle.classList.toggle("active", openCaseFilterPanel === "treatment");
+  concernToggle.querySelector("span").textContent = selectedCaseConcerns.size ? `(${selectedCaseConcerns.size})` : "";
+  treatmentToggle.querySelector("span").textContent = selectedCaseTreatments.size ? `(${selectedCaseTreatments.size})` : "";
+
+  if (!openCaseFilterPanel) {
+    panel.classList.remove("open");
+    panel.innerHTML = "";
+    return;
+  }
+
+  const options = getCaseFilterOptions(openCaseFilterPanel);
+  const selected = openCaseFilterPanel === "concern" ? selectedCaseConcerns : selectedCaseTreatments;
+  panel.classList.add("open");
+  if (!options.length) {
+    panel.innerHTML = '<div class="case-filter-empty">目前尚無可篩選的公開案例</div>';
+    return;
+  }
+
+  panel.innerHTML = `<div class="case-filter-options">${options.map(option => {
+    const value = openCaseFilterPanel === "concern" ? option : option.id;
+    const label = openCaseFilterPanel === "concern" ? option : option.name;
+    return `<button class="case-filter-option ${selected.has(value) ? "active" : ""}" onclick="toggleCaseFilterOption('${openCaseFilterPanel}', '${escapeAttr(value)}')">${escapeText(label)}</button>`;
+  }).join("")}</div>`;
+}
+
+function renderCaseActiveFilters() {
+  const box = document.getElementById("case-active-filters");
+  const concerns = [...selectedCaseConcerns].map(value => `<span class="case-active-chip">${escapeText(value)}</span>`);
+  const treatments = [...selectedCaseTreatments].map(getTreatmentById).filter(Boolean).map(item => `<span class="case-active-chip">${escapeText(item.name)}</span>`);
+  const chips = [...concerns, ...treatments];
+  box.classList.toggle("visible", Boolean(chips.length || caseTypeFilter !== "all"));
+  box.innerHTML = `${chips.join("")}${chips.length || caseTypeFilter !== "all" ? '<button class="case-clear-filters" onclick="clearCaseFilters()">清除篩選</button>' : ""}`;
+}
+
+function renderCaseComparison(pair) {
+  if (!isCompleteCasePair(pair)) return "";
+  return `<div class="case-comparison">
+    <figure>
+      <img src="${escapeAttr(pair.before.src)}" alt="${escapeAttr(pair.before.alt || "術前照片")}" loading="lazy">
+      <span class="case-photo-label">術前</span>
+    </figure>
+    <figure>
+      <img src="${escapeAttr(pair.after.src)}" alt="${escapeAttr(pair.after.alt || "術後照片")}" loading="lazy">
+      <span class="case-photo-label">術後</span>
+    </figure>
+  </div>`;
+}
+
+function renderCaseCard(caseItem) {
+  const pair = (caseItem.beforeAfterPairs || []).find(isCompleteCasePair);
+  const treatments = getCaseTreatments(caseItem);
+  const typeLabel = getCaseType(caseItem) === "compound" ? "複合療程" : "單一療程";
+  const concernTags = caseItem.concernTags || [];
+  return `<article class="case-card" onclick="openCaseDetail('${escapeAttr(caseItem.id)}')">
+    <div class="case-card-media">${renderCaseComparison(pair)}</div>
+    <div class="case-card-body">
+      <div class="case-card-meta"><span>${escapeText(caseItem.id)}</span><span>${typeLabel}</span></div>
+      <h2>${escapeText(caseItem.title)}</h2>
+      <div class="case-card-tag-row">
+        <span class="case-card-tag-label">改善</span>
+        <div class="case-card-tags">${concernTags.map(tag => `<span class="case-card-tag">${escapeText(tag)}</span>`).join("")}</div>
+      </div>
+      <div class="case-card-tag-row">
+        <span class="case-card-tag-label">療程</span>
+        <div class="case-card-tags">${treatments.map(item => `<span class="case-card-tag">${escapeText(item.name)}</span>`).join("")}</div>
+      </div>
+    </div>
+  </article>`;
+}
+
+function renderCases() {
+  const allCases = getPublishedCases();
+  const filteredCases = getFilteredCases();
+  const grid = document.getElementById("case-grid");
+  const summary = document.getElementById("case-result-summary");
+  if (!grid || !summary) return;
+
+  renderCaseFilterPanel();
+  renderCaseActiveFilters();
+  if (caseDataState === "loading" && !allCases.length) {
+    summary.textContent = "";
+    grid.innerHTML = '<div class="case-data-status">案例載入中...</div>';
+    return;
+  }
+  if (caseDataState === "error" && !allCases.length) {
+    summary.textContent = "";
+    grid.innerHTML = `<div class="case-data-status">${escapeText(caseDataError)}<button class="case-data-retry" onclick="refreshCasesFromSupabase()">重新載入</button></div>`;
+    return;
+  }
+  summary.textContent = allCases.length ? `顯示 ${filteredCases.length} / ${allCases.length} 個案例` : "";
+  if (!allCases.length) {
+    grid.innerHTML = '<div class="case-empty-state"><h2>案例陸續整理中</h2><p>取得完整影像授權後，案例將依改善困擾與使用療程分類展示。</p></div>';
+    return;
+  }
+  if (!filteredCases.length) {
+    grid.innerHTML = '<div class="case-empty-state"><h2>沒有符合的案例</h2><p>請減少篩選條件，或清除後重新查看全部案例。</p></div>';
+    return;
+  }
+  grid.innerHTML = filteredCases.map(renderCaseCard).join("");
 }
 
 function renderConcernGrid() {
@@ -3984,7 +4798,7 @@ function setupDetailAccordions() {
   ].map(id => document.getElementById(id)).filter(Boolean);
 
   cards.forEach(card => {
-    card.classList.remove('open');
+    card.classList.add('open');
     card.onclick = event => {
       if (event.target.closest('button')) return;
       card.classList.toggle('open');
@@ -4084,6 +4898,7 @@ function openDetail(name) {
     .replace(/\n・/g, '<br>・')
     .replace(/\n/g, '<br>');
   setupDetailAccordions();
+  renderRelatedCasesForTreatment(t.id);
 
   // Update add button
   const addBtn = document.getElementById('detail-add-btn');
@@ -4102,6 +4917,92 @@ function closeDetail() {
   document.getElementById('detail-panel').classList.remove('open');
   document.getElementById('detail-action-bar').classList.remove('visible');
   currentDetailKey = null;
+}
+
+function renderRelatedCasesForTreatment(treatmentId) {
+  const section = document.getElementById("detail-related-cases");
+  const list = document.getElementById("detail-related-cases-list");
+  const cases = getPublishedCases().filter(item => (item.treatmentIds || []).includes(treatmentId));
+  section.hidden = !cases.length;
+  if (!cases.length) {
+    list.innerHTML = "";
+    return;
+  }
+  list.innerHTML = cases.map(item => {
+    const pair = (item.beforeAfterPairs || []).find(isCompleteCasePair);
+    return `<article class="related-case-card" onclick="openCaseDetail('${escapeAttr(item.id)}')">
+      ${renderCaseComparison(pair)}
+      <div class="related-case-title">${escapeText(item.title)}</div>
+    </article>`;
+  }).join("");
+}
+
+function openCaseDetail(id) {
+  const caseItem = getCaseById(id);
+  if (!caseItem) return;
+  currentCaseId = id;
+  const treatments = getCaseTreatments(caseItem);
+  const pairs = (caseItem.beforeAfterPairs || []).filter(isCompleteCasePair);
+  const typeLabel = getCaseType(caseItem) === "compound" ? "複合療程" : "單一療程";
+
+  document.getElementById("case-detail-panel-title").textContent = caseItem.title;
+  document.getElementById("case-detail-number").textContent = `CASE ${caseItem.id}`;
+  document.getElementById("case-detail-title").textContent = caseItem.title;
+  document.getElementById("case-detail-type").textContent = typeLabel;
+  document.getElementById("case-detail-pairs").innerHTML = pairs.map(pair => `<section class="case-detail-pair">
+    ${renderCaseComparison(pair)}
+    <div class="case-pair-caption"><span>${escapeText(pair.label || "對照照片")}</span><span>${escapeText(pair.followUpLabel || "")}</span></div>
+  </section>`).join("");
+
+  const summarySection = document.getElementById("case-detail-summary-section");
+  summarySection.hidden = !caseItem.summary;
+  document.getElementById("case-detail-summary").textContent = caseItem.summary || "";
+  document.getElementById("case-detail-concerns").innerHTML = (caseItem.concernTags || []).map(tag => `<span class="case-detail-tag">${escapeText(tag)}</span>`).join("");
+  document.getElementById("case-detail-treatments").innerHTML = treatments.map(item => `<button class="case-treatment-link" onclick="openTreatmentFromCase('${escapeAttr(item.id)}')">${escapeText(item.name)}</button>`).join("");
+
+  const panel = document.getElementById("case-detail-panel");
+  panel.scrollTop = 0;
+  panel.classList.add("open");
+  document.getElementById("case-action-bar").classList.add("visible");
+  document.getElementById("detail-action-bar").classList.remove("visible");
+  document.body.style.overflow = "hidden";
+}
+
+function closeCaseDetail() {
+  document.getElementById("case-detail-panel").classList.remove("open");
+  document.getElementById("case-action-bar").classList.remove("visible");
+  currentCaseId = null;
+  const detailIsOpen = document.getElementById("detail-panel").classList.contains("open");
+  if (detailIsOpen) document.getElementById("detail-action-bar").classList.add("visible");
+  const treatmentPanelIsOpen = document.getElementById("treatment-panel").classList.contains("open");
+  document.body.style.overflow = detailIsOpen || treatmentPanelIsOpen ? "hidden" : "";
+}
+
+function openTreatmentFromCase(treatmentId) {
+  const treatment = getTreatmentById(treatmentId);
+  if (!treatment) return;
+  closeCaseDetail();
+  openDetail(treatment.name);
+}
+
+async function sendCaseToLine() {
+  const caseItem = getCaseById(currentCaseId);
+  if (!caseItem) return;
+  const treatmentNames = getCaseTreatments(caseItem).map(item => item.name);
+  const treatmentLines = treatmentNames.map(name => `・${name}`).join("\n");
+  const msg = `您好，我想參考以下案例進一步諮詢：\n\n案例：${caseItem.title}\n案例編號：${caseItem.id}\n\n使用療程：\n${treatmentLines}\n\n請問方便為我安排諮詢嗎？`;
+  trackMetaLead([caseItem.id, ...treatmentNames]);
+  if (typeof liff !== "undefined" && liff.isInClient && liff.isInClient()) {
+    try {
+      await liff.sendMessages([{ type: "text", text: msg }]);
+      liff.closeWindow();
+    } catch (error) {
+      showToast("傳送失敗，請再試一次");
+    }
+  } else {
+    showToast(`（預覽）已準備案例：${caseItem.title}`);
+    console.log("LINE case message:", msg);
+  }
 }
 
 function toggleFromDetail() {
@@ -4187,15 +5088,30 @@ function clearSelectedTreatments() {
   updateActionBar();
 }
 
-// ── Tab switch ──
-function switchTab(tab) {
-  const order = ['type', 'concern', 'doctors'];
-  document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    b.classList.toggle('active', order[i] === tab);
+// ── Navigation ──
+function switchPrimaryTab(tab) {
+  currentPrimaryTab = tab;
+  document.querySelectorAll('[data-primary-tab]').forEach(button => {
+    const active = button.dataset.primaryTab === tab;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', String(active));
   });
-  document.getElementById('view-concern').classList.toggle('active', tab === 'concern');
-  document.getElementById('view-type').classList.toggle('active', tab === 'type');
+  document.getElementById('view-treatments').classList.toggle('active', tab === 'treatments');
+  document.getElementById('view-cases').classList.toggle('active', tab === 'cases');
   document.getElementById('view-doctors').classList.toggle('active', tab === 'doctors');
+  if (tab === 'cases') renderCases();
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function switchTreatmentMode(mode) {
+  currentTreatmentMode = mode;
+  document.querySelectorAll('[data-treatment-mode]').forEach(button => {
+    const active = button.dataset.treatmentMode === mode;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', String(active));
+  });
+  document.getElementById('view-type').classList.toggle('active', mode === 'type');
+  document.getElementById('view-concern').classList.toggle('active', mode === 'concern');
 }
 
 // ── LIFF Send ──

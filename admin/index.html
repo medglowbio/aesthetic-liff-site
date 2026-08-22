@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>案例管理 · 艾絲柏美學診所</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div class="admin-toast" id="admin-toast" role="status"></div>
+
+  <main class="login-shell" id="login-view">
+    <section class="login-panel">
+      <div class="brand-mark">CLINIQUE DE L'ESPOIR</div>
+      <h1>案例管理</h1>
+      <p>限診所授權人員使用</p>
+      <div class="setup-warning" id="setup-warning" hidden>
+        尚未設定 Supabase。請先完成 <code>SUPABASE_SETUP.md</code> 的初始化步驟。
+      </div>
+      <form id="login-form">
+        <label>電子郵件<input id="login-email" type="email" autocomplete="username" required></label>
+        <label>密碼<input id="login-password" type="password" autocomplete="current-password" required></label>
+        <button class="primary-button" type="submit">登入後台</button>
+      </form>
+      <div class="login-message" id="login-message"></div>
+    </section>
+  </main>
+
+  <main class="login-shell" id="password-setup-view" hidden>
+    <section class="login-panel">
+      <div class="brand-mark">CLINIQUE DE L'ESPOIR</div>
+      <h1>設定後台密碼</h1>
+      <p>請為受邀帳號建立登入密碼</p>
+      <form id="password-setup-form">
+        <label>新密碼<input id="new-password" type="password" autocomplete="new-password" minlength="8" required></label>
+        <label>確認密碼<input id="confirm-password" type="password" autocomplete="new-password" minlength="8" required></label>
+        <button class="primary-button" type="submit">完成設定並進入後台</button>
+      </form>
+      <div class="login-message" id="password-setup-message"></div>
+    </section>
+  </main>
+
+  <div class="admin-app" id="admin-app" hidden>
+    <header class="admin-header">
+      <div>
+        <span class="brand-mark">CLINIQUE DE L'ESPOIR</span>
+        <strong>案例管理</strong>
+      </div>
+      <div class="account-box">
+        <span id="account-name"></span>
+        <span class="role-badge" id="account-role"></span>
+        <button class="text-button" id="logout-button" type="button">登出</button>
+      </div>
+    </header>
+
+    <div class="admin-layout">
+      <aside class="case-sidebar">
+        <div class="sidebar-head">
+          <div><span>CASES</span><h2>案例列表</h2></div>
+          <button class="icon-button" id="new-case-button" type="button" title="新增案例" aria-label="新增案例">＋</button>
+        </div>
+        <div class="status-tabs" id="status-tabs">
+          <button class="active" data-status="all">全部</button>
+          <button data-status="draft">草稿</button>
+          <button data-status="pending_review">待審</button>
+          <button data-status="published">已發布</button>
+          <button data-status="changes_requested">退回</button>
+          <button data-status="archived">封存</button>
+        </div>
+        <div class="case-list" id="admin-case-list"></div>
+      </aside>
+
+      <section class="editor-empty" id="editor-empty">
+        <div><span>CASE LIBRARY</span><h1>選擇案例或建立新案例</h1><p>案例發布前會經過主管審核，公開頁不會顯示任何患者身分資料。</p></div>
+      </section>
+
+      <section class="case-editor" id="case-editor" hidden>
+        <div class="editor-header">
+          <div><span id="editor-eyebrow">NEW CASE</span><h1 id="editor-title">新增案例</h1></div>
+          <div class="editor-header-actions"><span class="status-pill" id="editor-status"></span><button class="text-button" id="close-editor-button" type="button">關閉</button></div>
+        </div>
+
+        <form id="case-form">
+          <section class="form-section">
+            <div class="section-heading"><span>01</span><div><h2>案例基本資料</h2><p>使用改善目標命名，請勿輸入姓名、電話或病歷號。</p></div></div>
+            <div class="form-grid">
+              <label class="wide">案例名稱<input id="case-title" maxlength="100" required placeholder="例：中下臉輪廓與膚質改善"></label>
+              <label>案例編號<input id="case-id" disabled placeholder="儲存後自動產生"></label>
+              <label>顯示順序<input id="case-order" type="number" value="100"></label>
+              <label class="wide">改善摘要<textarea id="case-summary" rows="4" maxlength="1000" placeholder="簡要說明改善重點，不記錄劑量、能量或患者個資。"></textarea></label>
+              <label class="wide">改善困擾標籤<input id="case-concerns" placeholder="以逗號分隔，例如：輪廓鬆弛, 法令紋"></label>
+            </div>
+          </section>
+
+          <section class="form-section">
+            <div class="section-heading"><span>02</span><div><h2>使用療程</h2><p>可複選兩種以上療程建立複合療程案例。</p></div></div>
+            <div class="treatment-search"><input id="treatment-search" type="search" placeholder="搜尋療程名稱或分類"></div>
+            <div class="treatment-picker" id="treatment-picker"></div>
+          </section>
+
+          <section class="form-section">
+            <div class="section-heading"><span>03</span><div><h2>術前術後照片</h2><p>每張照片會裁切成 2:3、900 × 1350 WebP，並移除原始照片 metadata。</p></div></div>
+            <div class="photo-pairs" id="photo-pairs"></div>
+            <button class="secondary-button" id="add-photo-pair" type="button">＋ 新增一組照片</button>
+          </section>
+
+          <section class="form-section consent-section">
+            <div class="section-heading"><span>04</span><div><h2>影像公開授權</h2><p>只有已確認授權的案例才能發布。</p></div></div>
+            <label class="consent-check"><input id="case-consent" type="checkbox"><span>我已確認此案例影像具公開展示授權，且內容不含患者個人識別資訊。</span></label>
+            <div class="consent-record" id="consent-record"></div>
+          </section>
+
+          <section class="review-section" id="review-section" hidden>
+            <div class="section-heading"><span>05</span><div><h2>審核與發布</h2><p>審核動作會記錄操作者與時間。</p></div></div>
+            <label>審核備註<textarea id="workflow-note" rows="3" maxlength="1000" placeholder="退回修改時必填原因"></textarea></label>
+            <div class="workflow-actions" id="workflow-actions"></div>
+            <div class="event-log"><h3>歷次紀錄</h3><div id="event-list"></div></div>
+          </section>
+
+          <div class="form-actions">
+            <button class="secondary-button" id="save-draft-button" type="submit">儲存案例</button>
+            <button class="primary-button" id="submit-review-button" type="button">送交主管審核</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <dialog class="crop-dialog" id="crop-dialog">
+    <form method="dialog" class="crop-panel">
+      <div class="crop-head"><div><span>IMAGE CROP</span><h2>裁切 2:3 照片</h2></div><button value="cancel" class="icon-button" aria-label="取消">×</button></div>
+      <div class="crop-stage"><canvas id="crop-canvas" width="600" height="900"></canvas></div>
+      <div class="crop-controls">
+        <label>縮放<input id="crop-zoom" type="range" min="1" max="3" value="1" step="0.01"></label>
+        <label>水平位置<input id="crop-x" type="range" min="-100" max="100" value="0"></label>
+        <label>垂直位置<input id="crop-y" type="range" min="-100" max="100" value="0"></label>
+      </div>
+      <div class="crop-actions"><button value="cancel" class="secondary-button">取消</button><button id="confirm-crop" value="default" type="button" class="primary-button">套用裁切</button></div>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../assets/config/supabase-config.js"></script>
+  <script src="../assets/data/treatments-catalog.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
