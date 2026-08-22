@@ -2,6 +2,10 @@
   "use strict";
 
   const config = window.SUPABASE_CONFIG || {};
+  const initialHashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const initialQueryParams = new URLSearchParams(window.location.search);
+  const initialAuthType = initialHashParams.get("type") || initialQueryParams.get("type");
+  const initialPasswordSetupFlow = ["invite", "recovery"].includes(initialAuthType) || initialQueryParams.has("code");
   const configured = Boolean(config.url && config.publishableKey && window.supabase);
   const db = configured ? window.supabase.createClient(config.url, config.publishableKey) : null;
   const catalog = Array.isArray(window.TREATMENT_CATALOG) ? window.TREATMENT_CATALOG : [];
@@ -61,10 +65,7 @@
   }
 
   function isPasswordSetupFlow() {
-    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const query = new URLSearchParams(window.location.search);
-    const type = params.get("type") || query.get("type");
-    return type === "invite" || type === "recovery";
+    return initialPasswordSetupFlow;
   }
 
   function showPasswordSetup() {
@@ -494,7 +495,7 @@
     db.auth.onAuthStateChange(async (event, nextSession) => {
       session = nextSession;
       if (!session) showLogin();
-      else if ((event === "SIGNED_IN" || event === "PASSWORD_RECOVERY") && isPasswordSetupFlow()) showPasswordSetup();
+      else if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && isPasswordSetupFlow())) showPasswordSetup();
     });
   }
 
