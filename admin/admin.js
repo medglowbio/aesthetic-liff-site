@@ -119,7 +119,7 @@
     const { data, error } = await query;
     if (error) {
       toast(`案例載入失敗：${error.message}`);
-      return;
+      return false;
     }
     cases = data || [];
     renderCaseList();
@@ -127,6 +127,12 @@
       const found = cases.find(item => item.id === selectId);
       if (found) await openCase(found);
     }
+    return true;
+  }
+
+  function setStatusFilter(nextStatus) {
+    statusFilter = nextStatus;
+    document.querySelectorAll("[data-status]").forEach(item => item.classList.toggle("active", item.dataset.status === nextStatus));
   }
 
   function renderCaseList() {
@@ -358,10 +364,24 @@
         const { error } = await db.from("cases").update(values).eq("id", caseId);
         if (error) throw error;
       } else {
-        const { data, error } = await db.from("cases").insert({ ...values, created_by: uid(), status: "draft" }).select("id").single();
+        // New rows must initially satisfy the draft-only insert policy. Consent is
+        // recorded immediately afterwards while the new draft is editable.
+        const insertValues = {
+          ...values,
+          consent_confirmed: false,
+          consent_confirmed_by: null,
+          consent_confirmed_at: null,
+          created_by: uid(),
+          status: "draft"
+        };
+        const { data, error } = await db.from("cases").insert(insertValues).select("id").single();
         if (error) throw error;
         caseId = data.id;
         created = true;
+        if (consent) {
+          const consentUpdate = await db.from("cases").update(values).eq("id", caseId);
+          if (consentUpdate.error) throw consentUpdate.error;
+        }
       }
 
       const treatmentDelete = await db.from("case_treatments").delete().eq("case_id", caseId);
@@ -393,9 +413,19 @@
         }
       }
 
-      if (created) await invokeWorkflow("created", caseId, "建立案例");
-      toast("案例已儲存");
-      await loadCases(caseId);
+      let eventWarning = "";
+      if (created) {
+        try {
+          await invokeWorkflow("created", caseId, "建立案例");
+        } catch (error) {
+          console.warn("Case creation event logging failed", error);
+          eventWarning = "，操作紀錄稍後補登";
+        }
+      }
+      setStatusFilter("all");
+      const reloaded = await loadCases(caseId);
+      if (!reloaded) throw new Error("案例已儲存，但案例列表重新載入失敗，請重新整理頁面");
+      toast(`案例已儲存${eventWarning}`);
       return caseId;
     } finally {
       saving = false;
@@ -558,8 +588,7 @@
   $("status-tabs").addEventListener("click", event => {
     const button = event.target.closest("[data-status]");
     if (!button) return;
-    statusFilter = button.dataset.status;
-    document.querySelectorAll("[data-status]").forEach(item => item.classList.toggle("active", item === button));
+    setStatusFilter(button.dataset.status);
     renderCaseList();
   });
 
