@@ -435,7 +435,19 @@
 
   async function invokeWorkflow(action, caseId, note = "") {
     const { data, error } = await db.functions.invoke("case-workflow", { body: { action, caseId, note } });
-    if (error) throw new Error(error.context?.body?.error || error.message);
+    if (error) {
+      let message = error.message;
+      const response = error.context;
+      if (response && typeof response.json === "function") {
+        try {
+          const payload = await response.json();
+          message = payload?.error || message;
+        } catch {
+          // Keep the Supabase fallback message when the response is not JSON.
+        }
+      }
+      throw new Error(message);
+    }
     if (data?.error) throw new Error(data.error);
     return data;
   }
