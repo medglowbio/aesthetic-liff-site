@@ -2231,7 +2231,13 @@ body {
   cursor: pointer;
 }
 
-.case-card-media,
+.case-card-media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #d8d0c4;
+}
+
 .case-comparison {
   position: relative;
   display: grid;
@@ -2239,6 +2245,12 @@ body {
   aspect-ratio: 4 / 3;
   overflow: hidden;
   background: #d8d0c4;
+}
+
+.case-card-media > .case-comparison {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
 }
 
 .case-comparison figure {
