@@ -1,0 +1,7 @@
+project_id = "aesthetic-liff-site"
+
+[functions.case-workflow]
+verify_jwt = true
+
+[functions.catalog-workflow]
+verify_jwt = true

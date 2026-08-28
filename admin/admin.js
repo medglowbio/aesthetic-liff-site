@@ -10,7 +10,7 @@
   const db = configured ? window.supabase.createClient(config.url, config.publishableKey, {
     auth: { flowType: "pkce", detectSessionInUrl: true, persistSession: true }
   }) : null;
-  const catalog = Array.isArray(window.TREATMENT_CATALOG) ? window.TREATMENT_CATALOG : [];
+  let catalog = [];
   const statusLabels = {
     draft: "草稿",
     pending_review: "待審核",
@@ -90,22 +90,19 @@
     $("login-view").hidden = true;
     $("password-setup-view").hidden = true;
     $("admin-app").hidden = false;
-    if (isReviewer()) await syncTreatmentCatalog();
+    await loadTreatmentCatalog();
     await loadCases();
   }
 
-  async function syncTreatmentCatalog() {
-    if (!catalog.length) return;
-    const rows = catalog.map(item => ({
+  async function loadTreatmentCatalog() {
+    const { data, error } = await db.rpc("get_published_treatment_catalog");
+    if (error) throw error;
+    catalog = (data?.treatments || []).map(item => ({
       id: item.id,
       name: item.name,
-      category_id: item.categoryId,
-      category_name: item.categoryName,
-      active: true,
-      updated_at: new Date().toISOString()
+      categoryId: item.categoryId,
+      categoryName: item.categoryName
     }));
-    const { error } = await db.from("treatment_catalog").upsert(rows, { onConflict: "id" });
-    if (error) console.warn("Treatment catalog sync failed", error);
   }
 
   async function loadCases(selectId = null) {

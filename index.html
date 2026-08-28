@@ -23,6 +23,7 @@ if (META_PIXEL_ID && META_PIXEL_ID !== 'YOUR_META_PIXEL_ID') {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/config/supabase-config.js"></script>
 <script src="assets/js/supabase-cases.js"></script>
+<script src="assets/js/supabase-catalog.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;500&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -889,6 +890,28 @@ body {
 .toast.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+.catalog-status {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 20px 0;
+  padding: 11px 13px;
+  border: 1px solid var(--border-gold);
+  background: var(--warm-white);
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+.catalog-status.visible { display: flex; }
+.catalog-status button {
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  cursor: pointer;
 }
 
 /* ── Aesop-inspired visual refresh ── */
@@ -2556,6 +2579,11 @@ body {
     <button class="treatment-subnav-btn" data-treatment-mode="concern" onclick="switchTreatmentMode('concern')">依困擾選擇</button>
   </div>
 
+  <div class="catalog-status" id="catalog-status" role="status" aria-live="polite">
+    <span id="catalog-status-text"></span>
+    <button type="button" id="catalog-retry-btn" onclick="refreshTreatmentCatalog()">重新整理</button>
+  </div>
+
   <div class="treatment-mode-view active" id="view-type">
     <div class="category-list" id="category-list-type"></div>
   </div>
@@ -2933,7 +2961,7 @@ body {
 <script src="assets/data/cases-data.js"></script>
 <script>
 // ── Data ──
-const DATA = {
+let DATA = {
   categories: [
 {
       id: "aespa_products",
@@ -3309,7 +3337,7 @@ let caseDataState = "idle";
 let caseDataError = "";
 
 // ── Detail content map ──
-const DETAIL_MAP = {
+let DETAIL_MAP = {
   "肌膚解密 絲綢UV水凝乳 SPF50+": {
     licenseName: "",
     licenseNo: "衛部粧製字第008734號",
@@ -4130,11 +4158,12 @@ const PRODUCT_ITEM_NAMES = new Set([
 ]);
 
 function isProductCategory(cat) {
-  return cat && (cat.id === "skincare_products" || cat.id === "aespa_products");
+  return cat && (cat.contentType === "product" || cat.id === "skincare_products" || cat.id === "aespa_products");
 }
 
-function isProductItem(name) {
-  return PRODUCT_ITEM_NAMES.has(name);
+function isProductItem(key) {
+  const treatment = findTreatmentByKey(key);
+  return Boolean((treatment && treatment.contentType === "product") || PRODUCT_ITEM_NAMES.has(treatment ? treatment.name : key));
 }
 
 function getSelectionKind(names) {
@@ -4146,7 +4175,7 @@ function getSelectionKind(names) {
 }
 
 const PLACEHOLDER_IMAGE = "assets/images/aesop-placeholder.svg";
-const CATEGORY_IMAGE_MAP = {
+let CATEGORY_IMAGE_MAP = {
   aespa_products: "assets/images/aespa-clear-uv-protection.webp",
   beauty: "assets/images/acne-clearing.webp",
   health_type: "assets/images/mcs-blood-purification.webp",
@@ -4163,11 +4192,10 @@ const CATEGORY_IMAGE_MAP = {
   skincare_products: "assets/images/uv-gel.webp"
 };
 
-function findTreatmentCategory(name) {
+function findTreatmentCategory(key) {
   for (const cat of DATA.categories) {
-    for (const sc of cat.subcategories) {
-      if (sc.treatments.some(t => t.name === name)) return cat;
-    }
+    const treatments = cat.allTreatments || cat.subcategories.flatMap(sc => sc.treatments);
+    if (treatments.some(t => t.id === key || t.name === key)) return cat;
   }
   return null;
 }
@@ -4176,7 +4204,9 @@ function getCategoryMedia(cat) {
   const image = CATEGORY_IMAGE_MAP[cat.id] || PLACEHOLDER_IMAGE;
   return {
     image,
-    alt: `${cat.name} 分類圖片`
+    alt: cat.imageAlt || `${cat.name} 分類圖片`,
+    focusX: Number(cat.imageFocusX) || 50,
+    focusY: Number(cat.imageFocusY) || 50
   };
 }
 
@@ -4184,7 +4214,14 @@ function getTreatmentSearchText(t) {
   return [t.name, t.device, t.desc, ...(t.tags || [])].join(" ").toLowerCase();
 }
 
-function getDetailData(name) {
+function findTreatmentByKey(key) {
+  return getAllTreatments().find(item => item.id === key || item.name === key) || null;
+}
+
+function getDetailData(key) {
+  const treatment = findTreatmentByKey(key);
+  const name = treatment ? treatment.name : key;
+  if (DETAIL_MAP[key]) return DETAIL_MAP[key];
   if (DETAIL_MAP[name]) return DETAIL_MAP[name];
   if (PRODUCT_DETAIL_NAMES.has(name)) {
     return {
@@ -4204,17 +4241,105 @@ function getDetailData(name) {
   };
 }
 
-function getTreatmentMedia(name, category) {
-  const detail = getDetailData(name);
+function getTreatmentMedia(key, category) {
+  const treatment = findTreatmentByKey(key);
+  const name = treatment ? treatment.name : key;
+  const detail = getDetailData(key);
   return detail && detail.image ? {
     image: detail.image,
     alt: detail.imageAlt || `${name} 圖片`,
-    ratio: detail.imageRatio || "4 / 3"
+    ratio: detail.imageRatio || "4 / 3",
+    focusX: detail.imageFocusX == null ? 50 : detail.imageFocusX,
+    focusY: detail.imageFocusY == null ? 50 : detail.imageFocusY
   } : {
-    image: (category && CATEGORY_IMAGE_MAP[category.id]) || (findTreatmentCategory(name) && CATEGORY_IMAGE_MAP[findTreatmentCategory(name).id]) || PLACEHOLDER_IMAGE,
+    image: (category && CATEGORY_IMAGE_MAP[category.id]) || (findTreatmentCategory(key) && CATEGORY_IMAGE_MAP[findTreatmentCategory(key).id]) || PLACEHOLDER_IMAGE,
     alt: `${name} 圖片`,
-    ratio: "4 / 3"
+    ratio: "4 / 3",
+    focusX: 50,
+    focusY: 50
   };
+}
+
+function catalogNotes(preNotes, postNotes) {
+  const parts = [];
+  if (preNotes) parts.push(/^【術前注意事項】/.test(preNotes) ? preNotes : `【術前注意事項】\n${preNotes}`);
+  if (postNotes) parts.push(/^【術後注意事項】/.test(postNotes) ? postNotes : `【術後注意事項】\n${postNotes}`);
+  return parts.join("\n\n");
+}
+
+function applyCatalogSnapshot(catalog) {
+  if (!catalog || !Array.isArray(catalog.categories) || !Array.isArray(catalog.treatments)) return false;
+
+  const treatments = catalog.treatments.map(item => ({
+    id: item.id,
+    name: item.name || "未命名項目",
+    categoryId: item.categoryId,
+    contentType: item.contentType || "treatment",
+    device: item.device || "",
+    desc: item.desc || "",
+    tags: Array.isArray(item.tags) ? item.tags : [],
+    sortOrder: Number(item.sortOrder) || 100
+  }));
+  const treatmentMap = new Map(treatments.map(item => [item.id, item]));
+
+  DATA = {
+    categories: catalog.categories.map(category => {
+      const categoryTreatments = treatments
+        .filter(item => item.categoryId === category.id)
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "zh-Hant"));
+      const contentType = categoryTreatments.length && categoryTreatments.every(item => item.contentType === "product")
+        ? "product"
+        : "treatment";
+      const subcategories = (category.subcategories || []).map(subcategory => ({
+        id: subcategory.id,
+        name: subcategory.name,
+        treatments: (subcategory.treatmentIds || [])
+          .map(id => treatmentMap.get(id))
+          .filter(Boolean)
+          .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "zh-Hant"))
+      }));
+      return {
+        id: category.id,
+        group: category.group || "type",
+        name: category.name,
+        icon: category.icon || "",
+        concern: category.concern || "",
+        imageAlt: category.imageAlt || `${category.name} 分類圖片`,
+        imageFocusX: category.imageFocusX == null ? 50 : category.imageFocusX,
+        imageFocusY: category.imageFocusY == null ? 50 : category.imageFocusY,
+        contentType,
+        allTreatments: categoryTreatments,
+        subcategories
+      };
+    })
+  };
+
+  DETAIL_MAP = {};
+  catalog.treatments.forEach(item => {
+    DETAIL_MAP[item.id] = {
+      licenseName: item.licenseName || "",
+      licenseNo: item.licenseNo || "",
+      desc: item.fullDescription || item.desc || "",
+      suitable: item.suitable || "",
+      info: Array.isArray(item.info) ? item.info : [],
+      notes: catalogNotes(item.preNotes || "", item.postNotes || ""),
+      image: item.image || "",
+      imageAlt: item.imageAlt || `${item.name} 圖片`,
+      imageCaption: item.imageCaption || "",
+      imageRatio: "4 / 3",
+      imageFocusX: item.imageFocusX == null ? 50 : item.imageFocusX,
+      imageFocusY: item.imageFocusY == null ? 50 : item.imageFocusY
+    };
+  });
+
+  CATEGORY_IMAGE_MAP = {};
+  catalog.categories.forEach(category => {
+    if (category.image) CATEGORY_IMAGE_MAP[category.id] = category.image;
+  });
+
+  PRODUCT_ITEM_NAMES.clear();
+  treatments.filter(item => item.contentType === "product").forEach(item => PRODUCT_ITEM_NAMES.add(item.name));
+  return true;
 }
 
 function escapeAttr(value) {
@@ -4234,11 +4359,50 @@ function escapeText(value) {
 }
 
 // ── Init ──
-function init() {
+function setCatalogStatus(message, canRetry = false) {
+  const status = document.getElementById("catalog-status");
+  const text = document.getElementById("catalog-status-text");
+  const retry = document.getElementById("catalog-retry-btn");
+  if (!status || !text || !retry) return;
+  text.textContent = message || "";
+  retry.hidden = !canRetry;
+  status.classList.toggle("visible", Boolean(message));
+}
+
+async function refreshTreatmentCatalog() {
+  if (!window.CatalogRepository) return;
+  setCatalogStatus("正在更新療程目錄…");
+  const result = await window.CatalogRepository.loadPublishedCatalog();
+  if (result.catalog && applyCatalogSnapshot(result.catalog)) {
+    renderConcernGrid();
+    renderTypeList();
+    renderCases();
+    if (currentPanelCat && currentPanelCat.id && !String(currentPanelCat.id).startsWith("keyword-")) {
+      currentPanelCat = DATA.categories.find(item => item.id === currentPanelCat.id) || null;
+      if (currentPanelCat) {
+        renderSubcats(currentPanelCat);
+        renderTreatments(currentPanelCat);
+      }
+    }
+  }
+  if (result.error) {
+    const message = result.source === "cache"
+      ? "目前使用上次載入的療程資料。"
+      : "目前使用離線療程資料，連線恢復後可重新整理。";
+    setCatalogStatus(message, true);
+  } else {
+    setCatalogStatus("");
+  }
+}
+
+async function init() {
   renderConcernGrid();
   renderTypeList();
   renderCases();
-  refreshCasesFromSupabase();
+  await Promise.all([
+    refreshTreatmentCatalog(),
+    refreshCasesFromSupabase()
+  ]);
 }
 
 async function refreshCasesFromSupabase() {
@@ -4257,7 +4421,7 @@ async function refreshCasesFromSupabase() {
   }
   renderCases();
   if (currentDetailKey) {
-    const treatment = getAllTreatments().find(item => item.name === currentDetailKey);
+    const treatment = findTreatmentByKey(currentDetailKey);
     if (treatment) renderRelatedCasesForTreatment(treatment.id);
   }
 }
@@ -4265,13 +4429,7 @@ async function refreshCasesFromSupabase() {
 // ── Case data and gallery ──
 function getTreatmentById(id) {
   if (!id) return null;
-  for (const cat of DATA.categories) {
-    for (const sc of cat.subcategories) {
-      const treatment = sc.treatments.find(item => item.id === id);
-      if (treatment) return treatment;
-    }
-  }
-  return null;
+  return getAllTreatments().find(item => item.id === id) || null;
 }
 
 function isCompleteCasePair(pair) {
@@ -4548,12 +4706,12 @@ function renderConcernRecommendations() {
 function renderCategoryList() {
   const list = document.getElementById('category-list');
   list.innerHTML = DATA.categories.filter(cat => (cat.group || 'concern') === 'concern').map(cat => {
-    const total = new Set(cat.subcategories.flatMap(sc => sc.treatments.map(t => t.name))).size;
+    const total = uniqueTreatments(cat.allTreatments || cat.subcategories.flatMap(sc => sc.treatments)).length;
     const media = getCategoryMedia(cat);
     return `
       <div class="category-item" onclick="openCategory('${cat.id}')">
         <div class="cat-left">
-          <div class="cat-media"><img src="${media.image}" alt="${escapeAttr(media.alt)}" loading="lazy"></div>
+          <div class="cat-media"><img src="${media.image}" alt="${escapeAttr(media.alt)}" loading="lazy" style="object-position:${media.focusX}% ${media.focusY}%"></div>
           <div class="cat-meta">
             <div class="cat-kicker">${cat.icon} Explore</div>
             <div class="cat-name">${cat.name}</div>
@@ -4568,13 +4726,13 @@ function renderCategoryList() {
 function renderTypeList() {
   const list = document.getElementById('category-list-type');
   list.innerHTML = DATA.categories.filter(cat => cat.group === 'type').map(cat => {
-    const total = new Set(cat.subcategories.flatMap(sc => sc.treatments.map(t => t.name))).size;
+    const total = uniqueTreatments(cat.allTreatments || cat.subcategories.flatMap(sc => sc.treatments)).length;
     const itemLabel = isProductCategory(cat) ? '項保養品' : '項療程';
     const media = getCategoryMedia(cat);
     return `
       <div class="category-item" onclick="openCategory('${cat.id}')">
         <div class="cat-left">
-          <div class="cat-media"><img src="${media.image}" alt="${escapeAttr(media.alt)}" loading="lazy"></div>
+          <div class="cat-media"><img src="${media.image}" alt="${escapeAttr(media.alt)}" loading="lazy" style="object-position:${media.focusX}% ${media.focusY}%"></div>
           <div class="cat-meta">
             <div class="cat-kicker">${cat.icon} Catalogue</div>
             <div class="cat-name">${cat.name}</div>
@@ -4610,7 +4768,9 @@ function closePanel() {
 
 function getAllTreatments() {
   return uniqueTreatments(DATA.categories.flatMap(cat =>
-    cat.subcategories.flatMap(sc => sc.treatments)
+    Array.isArray(cat.allTreatments)
+      ? cat.allTreatments
+      : cat.subcategories.flatMap(sc => sc.treatments)
   ));
 }
 
@@ -4640,47 +4800,32 @@ function openKeyword(keyword) {
 function uniqueTreatments(treatments) {
   const seen = new Set();
   return treatments.filter(t => {
-    if (seen.has(t.name)) return false;
-    seen.add(t.name);
+    const key = t.id || t.name;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }
 
-const PRODUCT_CARD_ORDER = [
-  "肌膚解密 EK積雪草童妍精華",
-  "肌膚解密 絲綢UV水凝乳 SPF50+",
-  "肌膚解密 Rosé Peptide Glow SPF50 潤色防曬凝膠",
-  "艾絲柏 全透清透防曬",
-  "Bio Renewal貝兒妮 14% AzA精華乳",
-  "Bio Renewal貝兒妮 3D積雪草蝸牛專業面膜",
-  "Bio Renewal貝兒妮 皇家蜂萃精華油",
-  "Teoxane 3D澎唇精華 玻尿酸護唇膏",
-  "Bio Renewal貝兒妮 高效卸潔蜜",
-  "Bio Renewal貝兒妮 胺基酸純淨洗面乳",
-  "艾絲柏 外泌體術後修復面膜",
-  "訊聯 外泌體養蘊萌髮精華",
-  "Bio Renewal貝兒妮 超能量肌底精萃",
-  "Bio Renewal貝兒妮 蝸牛修護凝膠"
-];
-
 function sortProductTreatments(treatments) {
-  const order = new Map(PRODUCT_CARD_ORDER.map((name, index) => [name, index]));
   return [...treatments].sort((a, b) => {
-    const rankA = order.has(a.name) ? order.get(a.name) : Number.MAX_SAFE_INTEGER;
-    const rankB = order.has(b.name) ? order.get(b.name) : Number.MAX_SAFE_INTEGER;
+    const rankA = Number(a.sortOrder) || 100;
+    const rankB = Number(b.sortOrder) || 100;
     if (rankA !== rankB) return rankA - rankB;
     return a.name.localeCompare(b.name, 'zh-Hant');
   });
 }
 
 function getDisplaySubcategories(cat) {
-  let allTreatments = [];
+  let allTreatments = Array.isArray(cat.allTreatments) ? [...cat.allTreatments] : [];
   const subcategories = [];
   const allLabel = isProductCategory(cat) ? '全部保養品' : '全部療程';
 
   cat.subcategories.forEach(sc => {
     const name = (sc.name === '全部顯示' || sc.name === '全部療程') ? allLabel : sc.name;
-    allTreatments = allTreatments.concat(sc.treatments);
+    if (!Array.isArray(cat.allTreatments)) {
+      allTreatments = allTreatments.concat(sc.treatments);
+    }
     if (name !== allLabel) {
       subcategories.push({
         ...sc,
@@ -4757,14 +4902,14 @@ function renderTreatments(cat) {
 }
 
 function renderTreatmentCard(t, options = {}) {
-  const key = t.name;
-  const sel = selectedTreatments.has(key);
+  const key = t.id || t.name;
+  const sel = selectedTreatments.has(t.name);
   const media = getTreatmentMedia(key, options.category);
   const matchedTags = options.matchedTags || [];
   const tags = matchedTags.length ? matchedTags : t.tags;
   return `
     <div class="treatment-card ${sel ? 'selected' : ''} ${media ? 'has-image' : ''}" onclick="openDetail('${escapeAttr(key)}')">
-      ${media ? `<div class="treatment-card-media"><img src="${media.image}" alt="${escapeAttr(media.alt)}" loading="lazy"></div>` : ''}
+      ${media ? `<div class="treatment-card-media"><img src="${media.image}" alt="${escapeAttr(media.alt)}" loading="lazy" style="object-position:${media.focusX || 50}% ${media.focusY || 50}%"></div>` : ''}
       <div class="treatment-card-body">
         <div class="treatment-name">${escapeText(t.name)}</div>
         <div class="treatment-device">${escapeText(t.device)}</div>
@@ -4773,7 +4918,7 @@ function renderTreatmentCard(t, options = {}) {
       </div>
       <div class="treatment-card-right">
         <div class="card-detail-arrow">›</div>
-        <div class="card-select-btn" onclick="event.stopPropagation(); toggleFromCard('${escapeAttr(key)}', this.closest('.treatment-card'))">${sel ? '✓' : '+'}</div>
+        <div class="card-select-btn" onclick="event.stopPropagation(); toggleFromCard('${escapeAttr(t.name)}', this.closest('.treatment-card'))">${sel ? '✓' : '+'}</div>
       </div>
     </div>`;
 }
@@ -4837,23 +4982,16 @@ function toggleFromCard(name, cardEl) {
 }
 
 // ── Detail Panel ──
-function openDetail(name) {
-  currentDetailKey = name;
-  // Find treatment data
-  let t = null;
-  for (const cat of DATA.categories) {
-    for (const sc of cat.subcategories) {
-      t = sc.treatments.find(x => x.name === name);
-      if (t) break;
-    }
-    if (t) break;
-  }
+function openDetail(key) {
+  const t = findTreatmentByKey(key);
   if (!t) return;
+  currentDetailKey = t.id || t.name;
+  const name = t.name;
 
-  const detail = getDetailData(name);
-  const treatmentCategory = findTreatmentCategory(name);
-  const media = getTreatmentMedia(name, treatmentCategory);
-  const isProduct = isProductItem(name);
+  const detail = getDetailData(currentDetailKey);
+  const treatmentCategory = findTreatmentCategory(currentDetailKey);
+  const media = getTreatmentMedia(currentDetailKey, treatmentCategory);
+  const isProduct = isProductItem(currentDetailKey);
   document.getElementById('detail-panel-title').textContent = t.name;
   document.getElementById('detail-device').textContent = t.device;
   document.getElementById('detail-title').textContent = t.name;
@@ -4866,6 +5004,7 @@ function openDetail(name) {
     detailImage.src = media.image;
     detailImage.alt = media.alt || `${t.name} 圖片`;
     detailImage.style.aspectRatio = media.ratio || detail.imageRatio || '4 / 3';
+    detailImage.style.objectPosition = `${media.focusX || 50}% ${media.focusY || 50}%`;
     document.getElementById('detail-image-caption').textContent = detail.imageCaption || "";
     imageBlock.hidden = false;
   } else {
@@ -4873,6 +5012,7 @@ function openDetail(name) {
     const detailImage = document.getElementById('detail-image');
     detailImage.removeAttribute('src');
     detailImage.style.aspectRatio = '4 / 3';
+    detailImage.style.objectPosition = '50% 50%';
   }
   document.getElementById('detail-desc').innerHTML = (detail.desc || t.desc)
     .replace(/▍([^\n]+)/g, '<strong>▍$1</strong>')
@@ -4994,7 +5134,7 @@ function openTreatmentFromCase(treatmentId) {
   const treatment = getTreatmentById(treatmentId);
   if (!treatment) return;
   closeCaseDetail();
-  openDetail(treatment.name);
+  openDetail(treatment.id || treatment.name);
 }
 
 async function sendCaseToLine() {
@@ -5019,7 +5159,9 @@ async function sendCaseToLine() {
 
 function toggleFromDetail() {
   if (!currentDetailKey) return;
-  const name = currentDetailKey;
+  const treatment = findTreatmentByKey(currentDetailKey);
+  if (!treatment) return;
+  const name = treatment.name;
   const addBtn = document.getElementById('detail-add-btn');
   if (selectedTreatments.has(name)) {
     selectedTreatments.delete(name);
@@ -5039,16 +5181,19 @@ function toggleFromDetail() {
 
 async function sendSingleToLine() {
   if (!currentDetailKey) return;
-  const kind = getSelectionKind([currentDetailKey]);
-  const msg = `您好，我想了解以下${kind}的詳細資訊：\n\n・${currentDetailKey}\n\n請問方便為我安排諮詢嗎？`;
-  trackMetaLead([currentDetailKey]);
+  const treatment = findTreatmentByKey(currentDetailKey);
+  if (!treatment) return;
+  const name = treatment.name;
+  const kind = getSelectionKind([name]);
+  const msg = `您好，我想了解以下${kind}的詳細資訊：\n\n・${name}\n\n請問方便為我安排諮詢嗎？`;
+  trackMetaLead([name]);
   if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
     try {
       await liff.sendMessages([{ type: 'text', text: msg }]);
       liff.closeWindow();
     } catch(e) { showToast('傳送失敗，請再試一次'); }
   } else {
-    showToast('（預覽）已傳送：' + currentDetailKey);
+    showToast('（預覽）已傳送：' + name);
     console.log('LINE message:', msg);
   }
 }
