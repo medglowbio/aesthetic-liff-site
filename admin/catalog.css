@@ -1,3 +1,4 @@
+.catalog-gate { min-height: 100vh; display: grid; place-items: center; padding: 24px; color: var(--muted); }
 .catalog-layout {
   height: calc(100dvh - var(--admin-header-height));
   min-height: 0;

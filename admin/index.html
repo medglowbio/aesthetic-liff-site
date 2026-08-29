@@ -3,26 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>內容管理後台 · 艾絲柏美學診所</title>
+  <title>案例管理 · 艾絲柏美學診所</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260829-auth-gate-1">
+  <link rel="stylesheet" href="admin.css?v=20260829-admin-workspace-1">
 </head>
 <body>
   <div class="admin-toast" id="admin-toast" role="status"></div>
 
-  <main class="auth-gate" id="auth-gate" aria-busy="true">
-    <section class="auth-gate-panel">
-      <div class="brand-mark">CLINIQUE DE L'ESPOIR</div>
-      <p id="auth-gate-message" role="status" aria-live="polite">正在確認登入狀態</p>
-      <button class="secondary-button" id="auth-gate-retry" type="button" hidden>重新整理</button>
-    </section>
-  </main>
-
-  <main class="login-shell" id="login-view" hidden>
+  <main class="login-shell" id="login-view">
     <section class="login-panel">
       <div class="brand-mark">CLINIQUE DE L'ESPOIR</div>
-      <h1>內容管理後台</h1>
+      <h1>案例管理</h1>
       <p>限診所授權人員使用</p>
       <div class="setup-warning" id="setup-warning" hidden>
         尚未設定 Supabase。請先完成 <code>SUPABASE_SETUP.md</code> 的初始化步驟。
@@ -153,6 +145,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../assets/config/supabase-config.js"></script>
-  <script src="admin.js?v=20260829-auth-gate-1"></script>
+  <script src="admin.js?v=20260829-admin-workspace-1"></script>
 </body>
 </html>
