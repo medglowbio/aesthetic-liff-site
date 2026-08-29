@@ -1,17 +1,7 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS"
-};
+import { json, prepareWorkflowRequest, type WorkflowClient } from "../_shared/workflow-request.ts";
 
 type Action = "submit" | "request_changes" | "publish" | "unpublish" | "archive";
 type EntityType = "category" | "subcategory" | "treatment";
-
-function json(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-}
 
 function required(value: unknown) {
   return String(value ?? "").trim();
@@ -30,7 +20,7 @@ function validatePayload(type: EntityType, payload: Record<string, unknown>) {
   return "";
 }
 
-async function publishImage(client: ReturnType<typeof createClient>, draftPath: string, entityType: string, entityId: string) {
+async function publishImage(client: WorkflowClient, draftPath: string, entityType: string, entityId: string) {
   if (!draftPath) return "";
   if (!draftPath.includes("/")) return draftPath;
   const { data, error } = await client.storage.from("treatment-drafts").download(draftPath);
@@ -44,19 +34,9 @@ async function publishImage(client: ReturnType<typeof createClient>, draftPath: 
 }
 
 Deno.serve(async request => {
-  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (request.method !== "POST") return json(405, { error: "Method not allowed" });
-  const authorization = request.headers.get("Authorization");
-  if (!authorization) return json(401, { error: "Missing authorization" });
-
-  const client = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
-    global: { headers: { Authorization: authorization } }, auth: { persistSession: false }
-  });
-  const { data: userData } = await client.auth.getUser();
-  if (!userData.user) return json(401, { error: "Invalid session" });
-  const user = userData.user;
-  const { data: profile } = await client.from("profiles").select("role,active").eq("id", user.id).maybeSingle();
-  if (!profile?.active) return json(403, { error: "Account is disabled" });
+  const prepared = await prepareWorkflowRequest(request);
+  if (prepared.response) return prepared.response;
+  const { client, user, profile } = prepared.context;
 
   let body: { action?: Action; revisionId?: string; entityType?: EntityType; entityId?: string; note?: string };
   try { body = await request.json(); } catch { return json(400, { error: "Invalid JSON" }); }

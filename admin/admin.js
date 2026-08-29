@@ -45,24 +45,16 @@
   const authGate = window.AdminAuthGate.create({
     hiddenViewIds: ["login-view", "password-setup-view", "admin-app"]
   });
+  const { escapeHtml, parseList, createToast } = window.AdminUI;
+  const toast = createToast({ duration: 2800 });
+  const parseTags = parseList;
   const uid = () => session?.user?.id || "";
   const isReviewer = () => profile?.role === "reviewer";
   const isEditable = () => !currentCase || isReviewer() || (["draft", "changes_requested"].includes(currentCase.status) && currentCase.created_by === uid());
 
-  function toast(message) {
-    const element = $("admin-toast");
-    element.textContent = message;
-    element.classList.add("show");
-    window.setTimeout(() => element.classList.remove("show"), 2800);
-  }
-
   function formatDate(value) {
     if (!value) return "";
     return new Intl.DateTimeFormat("zh-TW", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
-  }
-
-  function parseTags(value) {
-    return [...new Set(String(value || "").split(/[,，\n]/).map(item => item.trim()).filter(Boolean))];
   }
 
   function showLogin(message = "") {
@@ -186,10 +178,6 @@
       const item = cases.find(entry => entry.id === button.dataset.caseId);
       if (item) openCase(item);
     }));
-  }
-
-  function escapeHtml(value) {
-    return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
   }
 
   function blankPair() {

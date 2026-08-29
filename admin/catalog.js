@@ -5,6 +5,8 @@
   const db = configured ? window.supabase.createClient(config.url, config.publishableKey, { auth: { persistSession: true } }) : null;
   const $ = id => document.getElementById(id);
   const authGate = window.AdminAuthGate.create({ hiddenViewIds: ["catalog-app"] });
+  const { escapeHtml, parseList, createToast } = window.AdminUI;
+  const toast = createToast({ duration: 3200 });
   const statusLabels = { draft: "草稿", pending_review: "待審核", changes_requested: "退回修改", published: "已發布", unpublished: "已下架", archived: "已封存" };
   let session;
   let profile;
@@ -26,8 +28,6 @@
 
   const isReviewer = () => profile?.role === "reviewer";
   const uid = () => session?.user?.id;
-  const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
-  const parseList = value => [...new Set(String(value || "").split(/[,，\n]/).map(v => v.trim()).filter(Boolean))];
   const slug = value => String(value || "item").normalize("NFKD").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "item";
   const makeId = (type, name) => `${type}-${slug(name)}-${crypto.randomUUID().slice(0, 8)}`;
   const typeLabels = { treatment: "療程／保養品", category: "大分類", subcategory: "子分類" };
@@ -111,12 +111,6 @@
       preNotes: String(p.preNotes ?? p.pre_notes ?? ""),
       postNotes: String(p.postNotes ?? p.post_notes ?? "")
     };
-  }
-
-  function toast(message) {
-    $("admin-toast").textContent = message;
-    $("admin-toast").classList.add("show");
-    setTimeout(() => $("admin-toast").classList.remove("show"), 3200);
   }
 
   async function showCatalog() {
