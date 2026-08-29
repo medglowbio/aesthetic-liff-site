@@ -37,6 +37,7 @@
   let deletedPhotoPairs = [];
   let cropState = null;
   let saving = false;
+  let savingLabel = "處理中…";
 
   const $ = id => document.getElementById(id);
   const uid = () => session?.user?.id || "";
@@ -129,13 +130,17 @@
 
   function setStatusFilter(nextStatus) {
     statusFilter = nextStatus;
-    document.querySelectorAll("[data-status]").forEach(item => item.classList.toggle("active", item.dataset.status === nextStatus));
+    document.querySelectorAll("[data-status]").forEach(item => {
+      const active = item.dataset.status === nextStatus;
+      item.classList.toggle("active", active);
+      item.setAttribute("aria-pressed", String(active));
+    });
   }
 
   function renderCaseList() {
     const filtered = statusFilter === "all" ? cases : cases.filter(item => item.status === statusFilter);
     $("admin-case-list").innerHTML = filtered.length ? filtered.map(item => `
-      <button class="case-list-item ${currentCase?.id === item.id ? "active" : ""}" data-case-id="${item.id}">
+      <button class="case-list-item ${currentCase?.id === item.id ? "active" : ""}" type="button" title="${escapeHtml(item.title)}" aria-label="開啟${escapeHtml(item.title)}，狀態${escapeHtml(statusLabels[item.status] || item.status)}" aria-current="${currentCase?.id === item.id ? "true" : "false"}" data-case-id="${item.id}">
         <strong>${escapeHtml(item.title)}</strong>
         <span class="case-list-meta"><span>${escapeHtml(item.id)}</span><span>${statusLabels[item.status] || item.status}</span></span>
         <span class="case-list-meta"><span>${(item.case_treatments || []).length > 1 ? "複合療程" : "單一療程"}</span><span>${formatDate(item.updated_at)}</span></span>
@@ -176,6 +181,7 @@
     renderTreatments();
     renderPhotoPairs();
     renderWorkflow();
+    $("case-editor").scrollTop = 0;
   }
 
   async function signedUrl(path) {
@@ -218,6 +224,7 @@
     renderWorkflow();
     renderEvents();
     renderCaseList();
+    $("case-editor").scrollTop = 0;
   }
 
   function showEditor() {
@@ -300,6 +307,8 @@
     $("submit-review-button").hidden = Boolean(currentCase && !["draft", "changes_requested"].includes(status));
     $("save-draft-button").disabled = !isEditable() || saving;
     $("submit-review-button").disabled = !isEditable() || saving;
+    $("save-draft-button").textContent = saving ? savingLabel : "儲存案例";
+    $("submit-review-button").textContent = saving ? savingLabel : "送交主管審核";
     $("add-photo-pair").disabled = !isEditable();
     $("case-consent").disabled = !isEditable();
     const actions = [];
@@ -311,6 +320,7 @@
     if (isReviewer() && status !== "archived") actions.push('<button type="button" class="secondary-button" data-workflow="archive">封存案例</button>');
     $("workflow-actions").innerHTML = actions.join("");
     document.querySelectorAll("[data-workflow]").forEach(button => button.addEventListener("click", () => runWorkflow(button.dataset.workflow)));
+    document.querySelectorAll("[data-workflow]").forEach(button => { button.disabled = saving; });
   }
 
   function renderEvents() {
@@ -342,6 +352,7 @@
     if (hasIncompletePair) throw new Error("照片組必須同時包含術前與術後");
 
     saving = true;
+    savingLabel = "儲存中…";
     renderWorkflow();
     try {
       const consent = $("case-consent").checked;
@@ -450,26 +461,40 @@
   }
 
   async function runWorkflow(action) {
+    if (saving) return;
     try {
       const note = $("workflow-note").value.trim();
       if (action === "request_changes" && !note) throw new Error("退回修改時請填寫原因");
       if (action === "publish") await saveCase();
+      saving = true;
+      savingLabel = "處理中…";
+      renderWorkflow();
       const result = await invokeWorkflow(action, currentCase.id, note);
       toast(`案例狀態已更新：${statusLabels[result.status] || result.status}`);
       await loadCases(currentCase.id);
     } catch (error) {
       toast(error.message || "操作失敗");
+    } finally {
+      saving = false;
+      renderWorkflow();
     }
   }
 
   async function submitReview() {
+    if (saving) return;
     try {
       const caseId = await saveCase();
+      saving = true;
+      savingLabel = "送審中…";
+      renderWorkflow();
       const result = await invokeWorkflow("submit", caseId, $("workflow-note").value.trim());
       toast(`案例已送審：${statusLabels[result.status]}`);
       await loadCases(caseId);
     } catch (error) {
       toast(error.message || "送審失敗");
+    } finally {
+      saving = false;
+      renderWorkflow();
     }
   }
 

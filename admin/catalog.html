@@ -6,8 +6,8 @@
   <title>療程目錄 · 艾絲柏美學診所</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css">
-  <link rel="stylesheet" href="catalog.css">
+  <link rel="stylesheet" href="admin.css?v=20260829-admin-workspace-1">
+  <link rel="stylesheet" href="catalog.css?v=20260829-admin-workspace-1">
 </head>
 <body>
   <div class="admin-toast" id="admin-toast" role="status"></div>
@@ -18,19 +18,20 @@
       <div class="account-box"><span id="account-name"></span><span class="role-badge" id="account-role"></span><button class="text-button" id="logout-button">登出</button></div>
     </header>
     <div class="catalog-layout">
-      <aside class="catalog-sidebar">
-        <div class="sidebar-head"><div><span>CATALOG</span><h2>療程目錄</h2></div><button class="icon-button" id="new-entity" title="新增">＋</button></div>
-        <div class="catalog-tabs"><button class="active" data-kind="treatment">療程／保養品</button><button data-kind="category">大分類</button><button data-kind="subcategory">子分類</button><button data-kind="revision">待審修訂</button></div>
+      <aside class="catalog-sidebar" id="catalog-sidebar">
+        <div class="sidebar-head"><div><span>CATALOG</span><h2>療程目錄</h2></div><button class="icon-button" id="new-entity" type="button" title="新增目錄內容" aria-label="新增目錄內容">＋</button></div>
+        <div class="catalog-tabs" role="tablist" aria-label="療程目錄分類"><button class="active" type="button" role="tab" aria-selected="true" data-kind="treatment">療程／保養品</button><button type="button" role="tab" aria-selected="false" data-kind="category">大分類</button><button type="button" role="tab" aria-selected="false" data-kind="subcategory">子分類</button><button type="button" role="tab" aria-selected="false" data-kind="revision">待審修訂</button></div>
         <div class="catalog-filter"><input id="catalog-search" type="search" placeholder="搜尋名稱、分類或 ID"></div>
         <div class="catalog-list" id="catalog-list"></div>
       </aside>
       <section class="catalog-empty" id="catalog-empty"><div><span>CATALOG STUDIO</span><h1>選擇項目或建立新內容</h1><p>公開網站會持續顯示目前已發布版本，直到主管核准新版。</p></div></section>
       <section class="catalog-editor" id="catalog-editor" hidden>
-        <header class="editor-header"><div><span id="entity-eyebrow">DRAFT</span><h1 id="entity-heading"></h1><div class="stable-id" id="stable-id"></div></div><div class="editor-header-actions"><span class="status-pill" id="entity-status"></span><button class="text-button" id="duplicate-button">複製</button><button class="text-button" id="close-button">關閉</button></div></header>
+        <header class="editor-header"><div><span id="entity-eyebrow">DRAFT</span><h1 id="entity-heading"></h1><div class="stable-id" id="stable-id"></div><div class="editor-mode-note" id="editor-mode-note"></div></div><div class="editor-header-actions"><span class="status-pill" id="entity-status"></span><button class="text-button" id="duplicate-button" type="button">複製</button><button class="text-button" id="close-button" type="button">關閉</button></div></header>
+        <section class="catalog-render-error" id="catalog-render-error" role="alert" hidden><h2>無法顯示這筆內容</h2><p id="catalog-render-error-message"></p><button class="secondary-button" id="catalog-retry" type="button">重新載入</button></section>
         <form id="catalog-form">
           <section class="form-section"><div class="section-heading"><span>01</span><div><h2>基本資料</h2><p>穩定 ID 建立後不可修改，改名不會破壞案例關聯。</p></div></div><div class="form-grid" id="base-fields"></div></section>
           <section class="form-section" id="detail-section"><div class="section-heading"><span>02</span><div><h2>完整內容</h2><p>卡片與詳情頁顯示的文字內容。</p></div></div><div class="form-grid" id="detail-fields"></div></section>
-          <section class="form-section" id="image-section"><div class="section-heading"><span>03</span><div><h2>圖片</h2><p>圖片會在瀏覽器輸出為 1200 × 900 WebP；可調整畫面焦點。</p></div></div><div class="catalog-image-editor"><label class="catalog-image-drop"><img id="image-preview" hidden><span id="image-placeholder">選擇 4:3 圖片</span><input id="image-file" type="file" accept="image/*"></label><div class="image-fields"><label>圖片替代文字<input id="image-alt" maxlength="160"></label><label>圖片說明<input id="image-caption" maxlength="200"></label><label>水平焦點<input id="focus-x" type="range" min="0" max="100" value="50"></label><label>垂直焦點<input id="focus-y" type="range" min="0" max="100" value="50"></label></div></div></section>
+          <section class="form-section" id="image-section"><div class="section-heading"><span>03</span><div><h2>圖片</h2><p>圖片會在瀏覽器輸出為 1200 × 900 WebP；可調整畫面焦點。</p></div></div><div class="catalog-image-editor"><label class="catalog-image-drop"><img id="image-preview" hidden><span id="image-placeholder">選擇 4:3 圖片</span><input id="image-file" type="file" accept="image/*"></label><div class="image-fields"><label>圖片替代文字<input id="image-alt" maxlength="160"></label><label>圖片說明<input id="image-caption" maxlength="200"></label><label class="range-label"><span>水平焦點<output id="focus-x-output">50%</output></span><input id="focus-x" type="range" min="0" max="100" value="50"></label><label class="range-label"><span>垂直焦點<output id="focus-y-output">50%</output></span><input id="focus-y" type="range" min="0" max="100" value="50"></label></div></div></section>
           <section class="review-section" id="catalog-review"><div class="section-heading"><span>04</span><div><h2>送審與發布</h2><p>編輯人員可送審；主管可發布、退回、下架或封存。</p></div></div><label>審核備註<textarea id="catalog-note" rows="3"></textarea></label><div class="workflow-actions" id="catalog-workflow-actions"></div><div class="event-log"><h3>修訂歷程</h3><div id="catalog-events"></div></div></section>
           <div class="form-actions"><button class="secondary-button" id="save-button" type="submit">儲存草稿</button><button class="primary-button" id="submit-button" type="button">送交主管審核</button></div>
         </form>
@@ -39,6 +40,6 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../assets/config/supabase-config.js"></script>
-  <script src="catalog.js"></script>
+  <script src="catalog.js?v=20260829-admin-workspace-1"></script>
 </body>
 </html>

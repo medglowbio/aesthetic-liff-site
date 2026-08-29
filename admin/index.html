@@ -6,7 +6,7 @@
   <title>案例管理 · 艾絲柏美學診所</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260829-catalog">
+  <link rel="stylesheet" href="admin.css?v=20260829-admin-workspace-1">
 </head>
 <body>
   <div class="admin-toast" id="admin-toast" role="status"></div>
@@ -64,12 +64,12 @@
           <button class="icon-button" id="new-case-button" type="button" title="新增案例" aria-label="新增案例">＋</button>
         </div>
         <div class="status-tabs" id="status-tabs">
-          <button class="active" data-status="all">全部</button>
-          <button data-status="draft">草稿</button>
-          <button data-status="pending_review">待審</button>
-          <button data-status="published">已發布</button>
-          <button data-status="changes_requested">退回</button>
-          <button data-status="archived">封存</button>
+          <button class="active" type="button" aria-pressed="true" data-status="all">全部</button>
+          <button type="button" aria-pressed="false" data-status="draft">草稿</button>
+          <button type="button" aria-pressed="false" data-status="pending_review">待審</button>
+          <button type="button" aria-pressed="false" data-status="published">已發布</button>
+          <button type="button" aria-pressed="false" data-status="changes_requested">退回</button>
+          <button type="button" aria-pressed="false" data-status="archived">封存</button>
         </div>
         <div class="case-list" id="admin-case-list"></div>
       </aside>
@@ -145,6 +145,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../assets/config/supabase-config.js"></script>
-  <script src="admin.js?v=20260829-catalog"></script>
+  <script src="admin.js?v=20260829-admin-workspace-1"></script>
 </body>
 </html>
