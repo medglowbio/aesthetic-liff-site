@@ -60,7 +60,24 @@
     return [...new Set(String(value || "").split(/[,，\n]/).map(item => item.trim()).filter(Boolean))];
   }
 
+  function showAuthGate(message = "正在確認登入狀態") {
+    $("auth-gate").hidden = false;
+    $("auth-gate").setAttribute("aria-busy", "true");
+    $("auth-gate-message").textContent = message;
+    $("auth-gate-retry").hidden = true;
+    $("login-view").hidden = true;
+    $("password-setup-view").hidden = true;
+    $("admin-app").hidden = true;
+  }
+
+  function showAuthError(message) {
+    showAuthGate(message);
+    $("auth-gate").setAttribute("aria-busy", "false");
+    $("auth-gate-retry").hidden = false;
+  }
+
   function showLogin(message = "") {
+    $("auth-gate").hidden = true;
     $("login-view").hidden = false;
     $("password-setup-view").hidden = true;
     $("admin-app").hidden = true;
@@ -72,6 +89,7 @@
   }
 
   function showPasswordSetup() {
+    $("auth-gate").hidden = true;
     $("login-view").hidden = true;
     $("password-setup-view").hidden = false;
     $("admin-app").hidden = true;
@@ -79,8 +97,10 @@
   }
 
   async function showApp() {
+    showAuthGate("正在載入後台內容");
     const { data, error } = await db.from("profiles").select("id,display_name,role,active").eq("id", uid()).single();
-    if (error || !data?.active) {
+    if (error) throw error;
+    if (!data?.active) {
       await db.auth.signOut();
       showLogin("帳號尚未啟用，請聯絡管理員。");
       return;
@@ -88,11 +108,12 @@
     profile = data;
     $("account-name").textContent = profile.display_name || session.user.email;
     $("account-role").textContent = isReviewer() ? "主管審核" : "內容編輯";
+    await loadTreatmentCatalog();
+    await loadCases();
+    $("auth-gate").hidden = true;
     $("login-view").hidden = true;
     $("password-setup-view").hidden = true;
     $("admin-app").hidden = false;
-    await loadTreatmentCatalog();
-    await loadCases();
   }
 
   async function loadTreatmentCatalog() {
@@ -553,17 +574,26 @@
     $("setup-warning").hidden = configured;
     $("login-form").querySelector("button").disabled = !configured;
     $("request-password-reset").disabled = !configured;
-    if (!configured) return;
-    const { data } = await db.auth.getSession();
-    session = data.session;
-    if (session) {
-      if (isPasswordSetupFlow()) showPasswordSetup(); else await showApp();
-    } else showLogin();
-    db.auth.onAuthStateChange(async (event, nextSession) => {
-      session = nextSession;
-      if (!session) showLogin();
-      else if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && isPasswordSetupFlow())) showPasswordSetup();
-    });
+    if (!configured) {
+      showLogin();
+      return;
+    }
+    try {
+      showAuthGate();
+      const { data, error } = await db.auth.getSession();
+      if (error) throw error;
+      session = data.session;
+      if (session) {
+        if (isPasswordSetupFlow()) showPasswordSetup(); else await showApp();
+      } else showLogin();
+      db.auth.onAuthStateChange(async (event, nextSession) => {
+        session = nextSession;
+        if (!session) showLogin();
+        else if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && isPasswordSetupFlow())) showPasswordSetup();
+      });
+    } catch (error) {
+      showAuthError(`無法確認登入狀態：${error.message || "請稍後再試"}`);
+    }
   }
 
   $("login-form").addEventListener("submit", async event => {
@@ -573,7 +603,11 @@
     if (error) { $("login-message").textContent = "登入失敗，請確認帳號與密碼。"; return; }
     session = data.session;
     $("login-message").textContent = "";
-    await showApp();
+    try {
+      await showApp();
+    } catch (error) {
+      showAuthError(`後台載入失敗：${error.message || "請稍後再試"}`);
+    }
   });
   $("request-password-reset").addEventListener("click", async () => {
     const email = $("login-email").value.trim();
@@ -607,8 +641,13 @@
     }
     window.history.replaceState({}, document.title, window.location.pathname);
     $("password-setup-message").textContent = "";
-    await showApp();
+    try {
+      await showApp();
+    } catch (error) {
+      showAuthError(`後台載入失敗：${error.message || "請稍後再試"}`);
+    }
   });
+  $("auth-gate-retry").addEventListener("click", () => window.location.reload());
   $("logout-button").addEventListener("click", () => db.auth.signOut());
   $("new-case-button").addEventListener("click", newCase);
   $("close-editor-button").addEventListener("click", closeEditor);

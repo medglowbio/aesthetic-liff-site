@@ -6,12 +6,18 @@
   <title>療程目錄 · 艾絲柏美學診所</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260829-admin-workspace-1">
-  <link rel="stylesheet" href="catalog.css?v=20260829-admin-workspace-1">
+  <link rel="stylesheet" href="admin.css?v=20260829-auth-gate-1">
+  <link rel="stylesheet" href="catalog.css?v=20260829-auth-gate-1">
 </head>
 <body>
   <div class="admin-toast" id="admin-toast" role="status"></div>
-  <main class="catalog-gate" id="catalog-gate"><p>正在確認後台權限...</p></main>
+  <main class="auth-gate" id="auth-gate" aria-busy="true">
+    <section class="auth-gate-panel">
+      <div class="brand-mark">CLINIQUE DE L'ESPOIR</div>
+      <p id="auth-gate-message" role="status" aria-live="polite">正在確認登入狀態</p>
+      <button class="secondary-button" id="auth-gate-retry" type="button" hidden>重新整理</button>
+    </section>
+  </main>
   <div class="admin-app" id="catalog-app" hidden>
     <header class="admin-header">
       <div><span class="brand-mark">CLINIQUE DE L'ESPOIR</span><strong>內容管理</strong><nav class="admin-module-nav"><a href="./">案例管理</a><a class="active" href="catalog.html">療程目錄</a></nav></div>
@@ -40,6 +46,6 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../assets/config/supabase-config.js"></script>
-  <script src="catalog.js?v=20260829-admin-workspace-1"></script>
+  <script src="catalog.js?v=20260829-auth-gate-1"></script>
 </body>
 </html>
