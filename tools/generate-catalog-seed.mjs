@@ -5,10 +5,9 @@ const root = path.resolve(import.meta.dirname, "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 
 function extractConst(name) {
-  const marker = `const ${name} =`;
-  const start = html.indexOf(marker);
-  if (start < 0) throw new Error(`Missing ${name}`);
-  let i = start + marker.length;
+  const declaration = html.match(new RegExp(`\\b(?:const|let)\\s+${name}\\s*=`));
+  if (!declaration || declaration.index == null) throw new Error(`Missing ${name}`);
+  let i = declaration.index + declaration[0].length;
   while (/\s/.test(html[i])) i++;
   const open = html[i];
   const close = open === "{" ? "}" : open === "[" ? "]" : null;
@@ -121,5 +120,4 @@ const lines = [
 ];
 
 fs.writeFileSync(path.join(root, "supabase/migrations/202608280002_seed_treatment_catalog.sql"), lines.join("\n"));
-fs.writeFileSync(path.join(root, "assets/data/catalog-static-snapshot.json"), JSON.stringify({ categories, subcategories, treatments: [...treatments.values()], links }, null, 2));
 console.log(JSON.stringify({ categories: categories.length, subcategories: subcategories.length, treatments: treatments.size, links: links.length }, null, 2));

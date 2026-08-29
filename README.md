@@ -7,7 +7,8 @@ Treatment, case and doctor directory for GitHub Pages and LINE LIFF.
 - `/admin/` manages cases.
 - `/admin/catalog.html` manages treatment categories, treatments, products and images.
 - Supabase Auth, Postgres, Storage and Edge Functions provide the draft, review and publish workflow.
-- The public site reads published catalog data through `get_published_treatment_catalog()` and keeps the embedded catalog as an offline fallback.
+- The public site renders the catalog snapshot embedded in `index.html` first, then replaces it with published data from `get_published_treatment_catalog()`.
+- Successful Supabase responses are cached in `localStorage`. If the network request fails, the site uses that cache when available and otherwise keeps the embedded snapshot visible.
 
 ## Supabase
 
