@@ -38,8 +38,13 @@
   let cropState = null;
   let saving = false;
   let savingLabel = "處理中…";
+  let appLoadPromise = null;
+  let authBootComplete = false;
 
   const $ = id => document.getElementById(id);
+  const authGate = window.AdminAuthGate.create({
+    hiddenViewIds: ["login-view", "password-setup-view", "admin-app"]
+  });
   const uid = () => session?.user?.id || "";
   const isReviewer = () => profile?.role === "reviewer";
   const isEditable = () => !currentCase || isReviewer() || (["draft", "changes_requested"].includes(currentCase.status) && currentCase.created_by === uid());
@@ -61,6 +66,8 @@
   }
 
   function showLogin(message = "") {
+    authGate.hide();
+    profile = null;
     $("login-view").hidden = false;
     $("password-setup-view").hidden = true;
     $("admin-app").hidden = true;
@@ -72,6 +79,7 @@
   }
 
   function showPasswordSetup() {
+    authGate.hide();
     $("login-view").hidden = true;
     $("password-setup-view").hidden = false;
     $("admin-app").hidden = true;
@@ -79,20 +87,48 @@
   }
 
   async function showApp() {
-    const { data, error } = await db.from("profiles").select("id,display_name,role,active").eq("id", uid()).single();
-    if (error || !data?.active) {
-      await db.auth.signOut();
-      showLogin("帳號尚未啟用，請聯絡管理員。");
-      return;
+    if (!session) { showLogin(); return; }
+    if (!$("admin-app").hidden && profile?.id === uid()) return;
+    if (appLoadPromise) return appLoadPromise;
+
+    const expectedUserId = uid();
+    appLoadPromise = (async () => {
+      authGate.showLoading("正在載入後台內容");
+      const { data, error } = await db.from("profiles").select("id,display_name,role,active").eq("id", expectedUserId).single();
+      if (error) throw error;
+      if (uid() !== expectedUserId) return;
+      if (!data?.active) {
+        await db.auth.signOut();
+        showLogin("帳號尚未啟用，請聯絡管理員。");
+        return;
+      }
+      profile = data;
+      $("account-name").textContent = profile.display_name || session.user.email;
+      $("account-role").textContent = isReviewer() ? "主管審核" : "內容編輯";
+      await Promise.all([
+        loadTreatmentCatalog(),
+        loadCases(null, { throwOnError: true })
+      ]);
+      if (uid() !== expectedUserId) return;
+      authGate.hide();
+      $("login-view").hidden = true;
+      $("password-setup-view").hidden = true;
+      $("admin-app").hidden = false;
+    })();
+
+    try {
+      return await appLoadPromise;
+    } finally {
+      appLoadPromise = null;
     }
-    profile = data;
-    $("account-name").textContent = profile.display_name || session.user.email;
-    $("account-role").textContent = isReviewer() ? "主管審核" : "內容編輯";
-    $("login-view").hidden = true;
-    $("password-setup-view").hidden = true;
-    $("admin-app").hidden = false;
-    await loadTreatmentCatalog();
-    await loadCases();
+  }
+
+  async function loadAppWithError() {
+    try {
+      await showApp();
+    } catch (error) {
+      authGate.showError(`後台載入失敗：${error.message || "請稍後再試"}`);
+    }
   }
 
   async function loadTreatmentCatalog() {
@@ -106,7 +142,7 @@
     }));
   }
 
-  async function loadCases(selectId = null) {
+  async function loadCases(selectId = null, { throwOnError = false } = {}) {
     let query = db.from("cases").select(`
       *,
       case_treatments(treatment_id),
@@ -116,6 +152,7 @@
     if (!isReviewer()) query = query.eq("created_by", uid());
     const { data, error } = await query;
     if (error) {
+      if (throwOnError) throw error;
       toast(`案例載入失敗：${error.message}`);
       return false;
     }
@@ -553,17 +590,47 @@
     $("setup-warning").hidden = configured;
     $("login-form").querySelector("button").disabled = !configured;
     $("request-password-reset").disabled = !configured;
-    if (!configured) return;
-    const { data } = await db.auth.getSession();
-    session = data.session;
-    if (session) {
-      if (isPasswordSetupFlow()) showPasswordSetup(); else await showApp();
-    } else showLogin();
-    db.auth.onAuthStateChange(async (event, nextSession) => {
+    if (!configured) {
+      showLogin();
+      return;
+    }
+
+    db.auth.onAuthStateChange((event, nextSession) => {
       session = nextSession;
-      if (!session) showLogin();
-      else if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && isPasswordSetupFlow())) showPasswordSetup();
+      if (!authBootComplete) return;
+      window.setTimeout(() => {
+        handleAuthTransition(event, nextSession).catch(error => {
+          authGate.showError(`後台載入失敗：${error.message || "請稍後再試"}`);
+        });
+      }, 0);
     });
+
+    try {
+      authGate.showLoading();
+      const { data, error } = await db.auth.getSession();
+      if (error) throw error;
+      session = data.session;
+      if (session) {
+        if (isPasswordSetupFlow()) showPasswordSetup(); else await loadAppWithError();
+      } else showLogin();
+    } catch (error) {
+      authGate.showError(`無法確認登入狀態：${error.message || "請稍後再試"}`);
+    } finally {
+      authBootComplete = true;
+    }
+  }
+
+  async function handleAuthTransition(event, nextSession) {
+    if (session !== nextSession) return;
+    if (!nextSession) {
+      showLogin();
+      return;
+    }
+    if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && isPasswordSetupFlow())) {
+      showPasswordSetup();
+      return;
+    }
+    if (event === "SIGNED_IN" || event === "INITIAL_SESSION") await loadAppWithError();
   }
 
   $("login-form").addEventListener("submit", async event => {
@@ -573,7 +640,7 @@
     if (error) { $("login-message").textContent = "登入失敗，請確認帳號與密碼。"; return; }
     session = data.session;
     $("login-message").textContent = "";
-    await showApp();
+    await loadAppWithError();
   });
   $("request-password-reset").addEventListener("click", async () => {
     const email = $("login-email").value.trim();
@@ -607,7 +674,7 @@
     }
     window.history.replaceState({}, document.title, window.location.pathname);
     $("password-setup-message").textContent = "";
-    await showApp();
+    await loadAppWithError();
   });
   $("logout-button").addEventListener("click", () => db.auth.signOut());
   $("new-case-button").addEventListener("click", newCase);

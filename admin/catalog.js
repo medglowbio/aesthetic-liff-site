@@ -1,8 +1,10 @@
 (function () {
   "use strict";
   const config = window.SUPABASE_CONFIG || {};
-  const db = window.supabase.createClient(config.url, config.publishableKey, { auth: { persistSession: true } });
+  const configured = Boolean(config.url && config.publishableKey && window.supabase);
+  const db = configured ? window.supabase.createClient(config.url, config.publishableKey, { auth: { persistSession: true } }) : null;
   const $ = id => document.getElementById(id);
+  const authGate = window.AdminAuthGate.create({ hiddenViewIds: ["catalog-app"] });
   const statusLabels = { draft: "草稿", pending_review: "待審核", changes_requested: "退回修改", published: "已發布", unpublished: "已下架", archived: "已封存" };
   let session;
   let profile;
@@ -18,6 +20,9 @@
   let busy = false;
   let openRequest = 0;
   let retryOpen = null;
+  let authBootComplete = false;
+  let appLoadPromise = null;
+  let bindingsReady = false;
 
   const isReviewer = () => profile?.role === "reviewer";
   const uid = () => session?.user?.id;
@@ -114,19 +119,80 @@
     setTimeout(() => $("admin-toast").classList.remove("show"), 3200);
   }
 
-  async function init() {
-    const auth = await db.auth.getSession();
-    session = auth.data.session;
+  async function showCatalog() {
     if (!session) { location.href = "./"; return; }
-    const result = await db.from("profiles").select("id,display_name,role,active").eq("id", uid()).single();
-    if (result.error || !result.data?.active) { location.href = "./"; return; }
-    profile = result.data;
-    $("account-name").textContent = profile.display_name || session.user.email;
-    $("account-role").textContent = isReviewer() ? "主管審核" : "內容編輯";
-    $("catalog-gate").hidden = true;
-    $("catalog-app").hidden = false;
-    bind();
-    await loadAll();
+    if (!$("catalog-app").hidden && profile?.id === uid()) return;
+    if (appLoadPromise) return appLoadPromise;
+
+    const expectedUserId = uid();
+    appLoadPromise = (async () => {
+      authGate.showLoading("正在載入後台內容");
+      const result = await db.from("profiles").select("id,display_name,role,active").eq("id", expectedUserId).single();
+      if (result.error) throw result.error;
+      if (uid() !== expectedUserId) return;
+      if (!result.data?.active) {
+        await db.auth.signOut();
+        location.href = "./";
+        return;
+      }
+      profile = result.data;
+      $("account-name").textContent = profile.display_name || session.user.email;
+      $("account-role").textContent = isReviewer() ? "主管審核" : "內容編輯";
+      if (!bindingsReady) {
+        bind();
+        bindingsReady = true;
+      }
+      await loadAll(null, { throwOnError: true });
+      if (uid() !== expectedUserId) return;
+      authGate.hide();
+      $("catalog-app").hidden = false;
+    })();
+
+    try {
+      return await appLoadPromise;
+    } finally {
+      appLoadPromise = null;
+    }
+  }
+
+  async function loadCatalogWithError() {
+    try {
+      await showCatalog();
+    } catch (error) {
+      authGate.showError(`後台載入失敗：${error.message || "請稍後再試"}`);
+    }
+  }
+
+  async function handleAuthTransition(event, nextSession) {
+    if (session !== nextSession) return;
+    if (!nextSession) { location.href = "./"; return; }
+    if (event === "PASSWORD_RECOVERY") { location.href = "./"; return; }
+    if (event === "SIGNED_IN" || event === "INITIAL_SESSION") await loadCatalogWithError();
+  }
+
+  async function init() {
+    if (!configured) throw new Error("Supabase 尚未完成設定");
+    db.auth.onAuthStateChange((event, nextSession) => {
+      session = nextSession;
+      if (!authBootComplete) return;
+      window.setTimeout(() => {
+        handleAuthTransition(event, nextSession).catch(error => {
+          authGate.showError(`後台載入失敗：${error.message || "請稍後再試"}`);
+        });
+      }, 0);
+    });
+    try {
+      authGate.showLoading();
+      const auth = await db.auth.getSession();
+      if (auth.error) throw auth.error;
+      session = auth.data.session;
+      if (!session) { location.href = "./"; return; }
+      await loadCatalogWithError();
+    } catch (error) {
+      authGate.showError(`無法確認登入狀態：${error.message || "請稍後再試"}`);
+    } finally {
+      authBootComplete = true;
+    }
   }
 
   function bind() {
@@ -144,7 +210,7 @@
     $("catalog-retry").onclick = () => retryOpen?.();
   }
 
-  async function loadAll(selectKey) {
+  async function loadAll(selectKey, { throwOnError = false } = {}) {
     const [categories, subcategories, treatments, revisionRows] = await Promise.all([
       db.from("treatment_categories").select("*").order("sort_order"),
       db.from("treatment_subcategories").select("*").order("sort_order"),
@@ -152,7 +218,11 @@
       db.from("catalog_revisions").select("*").order("updated_at", { ascending: false })
     ]);
     const error = categories.error || subcategories.error || treatments.error || revisionRows.error;
-    if (error) { toast(`目錄載入失敗：${error.message}`); return; }
+    if (error) {
+      if (throwOnError) throw error;
+      toast(`目錄載入失敗：${error.message}`);
+      return false;
+    }
     live.category = categories.data || [];
     live.subcategory = subcategories.data || [];
     live.treatment = treatments.data || [];
@@ -163,6 +233,7 @@
       const entity = type === "revision" ? revisions.find(v => v.id === id) : live[type]?.find(v => v.id === id);
       if (entity) await (type === "revision" ? openRevision(entity) : openLive(type, entity));
     }
+    return true;
   }
 
   function setKind(next) {
@@ -570,5 +641,5 @@
     renderList();
   }
 
-  init().catch(error => { $("catalog-gate").innerHTML = `<p>後台載入失敗：${escapeHtml(error.message)}</p>`; });
+  init().catch(error => authGate.showError(`無法確認登入狀態：${error.message || "請稍後再試"}`));
 })();
