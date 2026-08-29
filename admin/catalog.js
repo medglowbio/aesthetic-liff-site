@@ -1,7 +1,8 @@
 (function () {
   "use strict";
   const config = window.SUPABASE_CONFIG || {};
-  const db = window.supabase.createClient(config.url, config.publishableKey, { auth: { persistSession: true } });
+  const configured = Boolean(config.url && config.publishableKey && window.supabase);
+  const db = configured ? window.supabase.createClient(config.url, config.publishableKey, { auth: { persistSession: true } }) : null;
   const $ = id => document.getElementById(id);
   const statusLabels = { draft: "草稿", pending_review: "待審核", changes_requested: "退回修改", published: "已發布", unpublished: "已下架", archived: "已封存" };
   let session;
@@ -114,19 +115,34 @@
     setTimeout(() => $("admin-toast").classList.remove("show"), 3200);
   }
 
+  function showAuthError(message) {
+    $("auth-gate").hidden = false;
+    $("auth-gate").setAttribute("aria-busy", "false");
+    $("auth-gate-message").textContent = message;
+    $("auth-gate-retry").hidden = false;
+    $("catalog-app").hidden = true;
+  }
+
   async function init() {
+    if (!configured) throw new Error("Supabase 尚未完成設定");
     const auth = await db.auth.getSession();
+    if (auth.error) throw auth.error;
     session = auth.data.session;
     if (!session) { location.href = "./"; return; }
     const result = await db.from("profiles").select("id,display_name,role,active").eq("id", uid()).single();
-    if (result.error || !result.data?.active) { location.href = "./"; return; }
+    if (result.error) throw result.error;
+    if (!result.data?.active) {
+      await db.auth.signOut();
+      location.href = "./";
+      return;
+    }
     profile = result.data;
     $("account-name").textContent = profile.display_name || session.user.email;
     $("account-role").textContent = isReviewer() ? "主管審核" : "內容編輯";
-    $("catalog-gate").hidden = true;
-    $("catalog-app").hidden = false;
     bind();
     await loadAll();
+    $("auth-gate").hidden = true;
+    $("catalog-app").hidden = false;
   }
 
   function bind() {
@@ -570,5 +586,6 @@
     renderList();
   }
 
-  init().catch(error => { $("catalog-gate").innerHTML = `<p>後台載入失敗：${escapeHtml(error.message)}</p>`; });
+  $("auth-gate-retry").onclick = () => window.location.reload();
+  init().catch(error => showAuthError(`無法確認登入狀態：${error.message || "請稍後再試"}`));
 })();
