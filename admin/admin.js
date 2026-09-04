@@ -2,11 +2,12 @@
   "use strict";
 
   const config = window.SUPABASE_CONFIG || {};
+  const photoLayouts = window.CasePhotoLayouts;
   const initialHashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const initialQueryParams = new URLSearchParams(window.location.search);
   const initialAuthType = initialHashParams.get("type") || initialQueryParams.get("type");
   const initialPasswordSetupFlow = ["invite", "recovery"].includes(initialAuthType) || initialQueryParams.has("code");
-  const configured = Boolean(config.url && config.publishableKey && window.supabase);
+  const configured = Boolean(config.url && config.publishableKey && window.supabase && photoLayouts);
   const db = configured ? window.supabase.createClient(config.url, config.publishableKey, {
     auth: { flowType: "pkce", detectSessionInUrl: true, persistSession: true }
   }) : null;
@@ -138,7 +139,11 @@
     let query = db.from("cases").select(`
       *,
       case_treatments(treatment_id),
-      case_photo_pairs(id,label,follow_up_label,sort_order,before_private_path,after_private_path,before_public_path,after_public_path),
+      case_photo_pairs(
+        id,label,follow_up_label,sort_order,canvas_ratio,split_direction,
+        before_private_path,after_private_path,before_source_private_path,after_source_private_path,
+        before_crop_rect,after_crop_rect,before_public_path,after_public_path
+      ),
       case_events(id,event_type,note,actor_id,created_at)
     `).order("updated_at", { ascending: false });
     if (!isReviewer()) query = query.eq("created_by", uid());
@@ -180,11 +185,45 @@
     }));
   }
 
+  function normalizeCropRect(value) {
+    if (!value || typeof value !== "object") return null;
+    const rect = {
+      x: Number(value.x),
+      y: Number(value.y),
+      width: Number(value.width),
+      height: Number(value.height)
+    };
+    if (!Object.values(rect).every(Number.isFinite)) return null;
+    if (rect.x < 0 || rect.y < 0 || rect.width <= 0 || rect.height <= 0) return null;
+    if (rect.x + rect.width > 1.0001 || rect.y + rect.height > 1.0001) return null;
+    return rect;
+  }
+
+  function hasPhoto(pair, side) {
+    return Boolean(pair[`${side}Blob`] || pair[`${side}PrivatePath`]);
+  }
+
+  function hasSource(pair, side) {
+    return Boolean(pair[`${side}SourceBlob`] || pair[`${side}SourcePrivatePath`] || pair[`${side}SourcePreview`]);
+  }
+
+  function needsRecrop(pair, side) {
+    return hasPhoto(pair, side) && (
+      pair[`${side}RenderedRatio`] !== pair.canvasRatio ||
+      pair[`${side}RenderedDirection`] !== pair.splitDirection
+    );
+  }
+
   function blankPair() {
     return {
       clientId: crypto.randomUUID(), id: null, label: "正面", followUpLabel: "",
+      canvasRatio: "4:3", splitDirection: "horizontal",
       beforePrivatePath: "", afterPrivatePath: "", beforePreview: "", afterPreview: "",
-      beforeBlob: null, afterBlob: null
+      beforeSourcePrivatePath: "", afterSourcePrivatePath: "", beforeSourcePreview: "", afterSourcePreview: "",
+      beforeCropRect: null, afterCropRect: null,
+      beforeRenderedRatio: null, afterRenderedRatio: null,
+      beforeRenderedDirection: null, afterRenderedDirection: null,
+      beforeBlob: null, afterBlob: null, beforeSourceBlob: null, afterSourceBlob: null
     };
   }
 
@@ -224,12 +263,26 @@
       id: pair.id,
       label: pair.label || "正面",
       followUpLabel: pair.follow_up_label || "",
+      canvasRatio: photoLayouts.normalizeRatio(pair.canvas_ratio),
+      splitDirection: photoLayouts.normalizeDirection(pair.split_direction),
       beforePrivatePath: pair.before_private_path,
       afterPrivatePath: pair.after_private_path,
+      beforeSourcePrivatePath: pair.before_source_private_path || "",
+      afterSourcePrivatePath: pair.after_source_private_path || "",
       beforePreview: await signedUrl(pair.before_private_path),
       afterPreview: await signedUrl(pair.after_private_path),
+      beforeSourcePreview: await signedUrl(pair.before_source_private_path),
+      afterSourcePreview: await signedUrl(pair.after_source_private_path),
+      beforeCropRect: normalizeCropRect(pair.before_crop_rect),
+      afterCropRect: normalizeCropRect(pair.after_crop_rect),
+      beforeRenderedRatio: photoLayouts.normalizeRatio(pair.canvas_ratio),
+      afterRenderedRatio: photoLayouts.normalizeRatio(pair.canvas_ratio),
+      beforeRenderedDirection: photoLayouts.normalizeDirection(pair.split_direction),
+      afterRenderedDirection: photoLayouts.normalizeDirection(pair.split_direction),
       beforeBlob: null,
-      afterBlob: null
+      afterBlob: null,
+      beforeSourceBlob: null,
+      afterSourceBlob: null
     })));
     if (!photoPairs.length) photoPairs = [blankPair()];
     $("case-title").value = item.title || "";
@@ -286,36 +339,89 @@
   }
 
   function renderPhotoPairs() {
-    $("photo-pairs").innerHTML = photoPairs.map((pair, index) => `
-      <article class="photo-pair" data-pair-index="${index}">
-        <div class="photo-pair-head"><strong>照片組 ${index + 1}</strong><button class="remove-pair" type="button" data-remove-pair="${index}">移除此組</button></div>
-        <div class="photo-meta">
-          <input value="${escapeHtml(pair.label)}" data-pair-label="${index}" placeholder="角度，例如：正面">
-          <input value="${escapeHtml(pair.followUpLabel)}" data-pair-follow-up="${index}" placeholder="追蹤時間，例如：療程後三個月">
-        </div>
-        <div class="photo-columns">
-          ${photoUploadTemplate(pair, index, "before", "術前")}
-          ${photoUploadTemplate(pair, index, "after", "術後")}
-        </div>
-      </article>`).join("");
+    $("photo-pairs").innerHTML = photoPairs.map((pair, index) => {
+      const layout = photoLayouts.getLayout(pair.canvasRatio, pair.splitDirection);
+      return `
+        <article class="photo-pair" data-pair-index="${index}">
+          <div class="photo-pair-head"><strong>照片組 ${index + 1}</strong><button class="remove-pair" type="button" data-remove-pair="${index}">移除此組</button></div>
+          <div class="photo-meta">
+            <input value="${escapeHtml(pair.label)}" data-pair-label="${index}" placeholder="角度，例如：正面">
+            <input value="${escapeHtml(pair.followUpLabel)}" data-pair-follow-up="${index}" placeholder="追蹤時間，例如：療程後三個月">
+          </div>
+          <div class="photo-layout-controls">
+            <fieldset class="photo-layout-group">
+              <legend>完整畫布比例</legend>
+              <div class="photo-segments">
+                ${Object.values(photoLayouts.ratios).map(option => `<button type="button" class="${pair.canvasRatio === option.value ? "active" : ""}" aria-pressed="${pair.canvasRatio === option.value}" data-pair-ratio="${index}|${option.value}" ${isEditable() ? "" : "disabled"}>${option.label}</button>`).join("")}
+              </div>
+            </fieldset>
+            <fieldset class="photo-layout-group">
+              <legend>排列方式</legend>
+              <div class="photo-segments">
+                ${Object.values(photoLayouts.directions).map(option => `<button type="button" class="${pair.splitDirection === option.value ? "active" : ""}" aria-pressed="${pair.splitDirection === option.value}" data-pair-direction="${index}|${option.value}" ${isEditable() ? "" : "disabled"}>${option.label}</button>`).join("")}
+              </div>
+            </fieldset>
+          </div>
+          <div class="photo-comparison-admin ${layout.ratioClass} ${layout.directionClass}">
+            ${photoUploadTemplate(pair, index, "before", "術前")}
+            ${photoUploadTemplate(pair, index, "after", "術後")}
+          </div>
+          <p class="photo-layout-size">完整畫布 ${layout.canvasWidth} × ${layout.canvasHeight} px；每張 ${layout.slotWidth} × ${layout.slotHeight} px</p>
+        </article>`;
+    }).join("");
     document.querySelectorAll("[data-remove-pair]").forEach(button => button.addEventListener("click", () => removePhotoPair(Number(button.dataset.removePair))));
     document.querySelectorAll("[data-pair-label]").forEach(input => input.addEventListener("input", () => photoPairs[Number(input.dataset.pairLabel)].label = input.value));
     document.querySelectorAll("[data-pair-follow-up]").forEach(input => input.addEventListener("input", () => photoPairs[Number(input.dataset.pairFollowUp)].followUpLabel = input.value));
+    document.querySelectorAll("[data-pair-ratio]").forEach(button => button.addEventListener("click", () => {
+      const [index, ratio] = button.dataset.pairRatio.split("|");
+      updatePairLayout(Number(index), { canvasRatio: ratio });
+    }));
+    document.querySelectorAll("[data-pair-direction]").forEach(button => button.addEventListener("click", () => {
+      const [index, direction] = button.dataset.pairDirection.split("|");
+      updatePairLayout(Number(index), { splitDirection: direction });
+    }));
     document.querySelectorAll("[data-photo-input]").forEach(input => input.addEventListener("change", event => {
       const [index, side] = input.dataset.photoInput.split(":");
       const file = event.target.files?.[0];
       if (file) startCrop(file, Number(index), side);
       input.value = "";
     }));
+    document.querySelectorAll("[data-photo-pick]").forEach(button => button.addEventListener("click", () => {
+      const [index, side] = button.dataset.photoPick.split(":");
+      document.querySelector(`[data-photo-input="${index}:${side}"]`)?.click();
+    }));
+    document.querySelectorAll("[data-photo-edit]").forEach(button => button.addEventListener("click", () => {
+      const [index, side] = button.dataset.photoEdit.split(":");
+      editCrop(Number(index), side);
+    }));
   }
 
   function photoUploadTemplate(pair, index, side, label) {
     const preview = side === "before" ? pair.beforePreview : pair.afterPreview;
-    return `<label class="photo-upload">
+    const sourceAvailable = hasSource(pair, side);
+    const recropRequired = needsRecrop(pair, side);
+    const warning = recropRequired
+      ? (sourceAvailable ? "版型已變更，請重新裁切" : "舊照片沒有母圖，請重新上傳")
+      : "";
+    return `<div class="photo-upload">
       ${preview ? `<img src="${escapeHtml(preview)}" alt="${label}預覽">` : '<span class="photo-placeholder">＋<br>選擇並裁切照片</span>'}
       <input type="file" accept="image/jpeg,image/png,image/webp" data-photo-input="${index}:${side}" ${isEditable() ? "" : "disabled"}>
       <span class="photo-label">${label}</span>
-    </label>`;
+      ${warning ? `<span class="photo-crop-warning">${warning}</span>` : ""}
+      <span class="photo-upload-actions">
+        <button type="button" data-photo-pick="${index}:${side}" ${isEditable() ? "" : "disabled"}>${preview ? "更換" : "選擇"}</button>
+        ${preview ? `<button type="button" data-photo-edit="${index}:${side}" title="${sourceAvailable ? "使用私有母圖重新裁切" : "舊照片沒有可重新裁切的母圖"}" ${isEditable() && sourceAvailable ? "" : "disabled"}>重新裁切</button>` : ""}
+      </span>
+    </div>`;
+  }
+
+  function updatePairLayout(index, changes) {
+    if (!isEditable()) return;
+    const pair = photoPairs[index];
+    if (!pair) return;
+    if (changes.canvasRatio) pair.canvasRatio = photoLayouts.normalizeRatio(changes.canvasRatio);
+    if (changes.splitDirection) pair.splitDirection = photoLayouts.normalizeDirection(changes.splitDirection);
+    renderPhotoPairs();
   }
 
   function removePhotoPair(index) {
@@ -353,15 +459,16 @@
     $("event-list").innerHTML = events.length ? events.map(item => `<div class="event-item"><time>${formatDate(item.created_at)}</time><p><strong>${eventLabels[item.event_type] || item.event_type}</strong>${item.note ? `<br>${escapeHtml(item.note)}` : ""}</p></div>`).join("") : '<div class="case-list-empty">尚無操作紀錄</div>';
   }
 
-  async function uploadBlob(caseId, pair, side) {
-    const blob = side === "before" ? pair.beforeBlob : pair.afterBlob;
-    const existing = side === "before" ? pair.beforePrivatePath : pair.afterPrivatePath;
-    if (!blob) return existing;
-    const path = `${uid()}/${caseId}/${crypto.randomUUID()}-${side}.webp`;
+  async function uploadPairBlob(caseId, pair, side, kind) {
+    const source = kind === "source";
+    const blob = pair[`${side}${source ? "Source" : ""}Blob`];
+    const existing = pair[`${side}${source ? "Source" : ""}PrivatePath`];
+    if (!blob) return { path: existing, replacedPath: "", uploaded: false };
+    const suffix = source ? `${side}-source` : side;
+    const path = `${uid()}/${caseId}/${crypto.randomUUID()}-${suffix}.webp`;
     const { error } = await db.storage.from("case-drafts").upload(path, blob, { contentType: "image/webp", upsert: false });
     if (error) throw error;
-    if (existing) await db.storage.from("case-drafts").remove([existing]);
-    return path;
+    return { path, replacedPath: existing, uploaded: true };
   }
 
   async function saveCase() {
@@ -370,11 +477,14 @@
     const title = $("case-title").value.trim();
     if (title.length < 2) throw new Error("請填寫案例名稱");
     const hasIncompletePair = photoPairs.some(pair => {
-      const hasBefore = Boolean(pair.beforeBlob || pair.beforePrivatePath);
-      const hasAfter = Boolean(pair.afterBlob || pair.afterPrivatePath);
+      const hasBefore = hasPhoto(pair, "before");
+      const hasAfter = hasPhoto(pair, "after");
       return (hasBefore || hasAfter) && !(hasBefore && hasAfter);
     });
     if (hasIncompletePair) throw new Error("照片組必須同時包含術前與術後");
+    if (photoPairs.some(pair => needsRecrop(pair, "before") || needsRecrop(pair, "after"))) {
+      throw new Error("版型已變更，請先重新裁切術前與術後照片");
+    }
 
     saving = true;
     savingLabel = "儲存中…";
@@ -425,24 +535,62 @@
       }
 
       for (const removed of deletedPhotoPairs) {
-        const paths = [removed.beforePrivatePath, removed.afterPrivatePath].filter(Boolean);
+        const paths = [
+          removed.beforePrivatePath,
+          removed.afterPrivatePath,
+          removed.beforeSourcePrivatePath,
+          removed.afterSourcePrivatePath
+        ].filter(Boolean);
         if (paths.length) await db.storage.from("case-drafts").remove(paths);
         const result = await db.from("case_photo_pairs").delete().eq("id", removed.id);
         if (result.error) throw result.error;
       }
 
-      const completePairs = photoPairs.filter(pair => (pair.beforeBlob || pair.beforePrivatePath) && (pair.afterBlob || pair.afterPrivatePath));
+      const completePairs = photoPairs.filter(pair => hasPhoto(pair, "before") && hasPhoto(pair, "after"));
       for (let index = 0; index < completePairs.length; index++) {
         const pair = completePairs[index];
-        const beforePath = await uploadBlob(caseId, pair, "before");
-        const afterPath = await uploadBlob(caseId, pair, "after");
-        const row = { case_id: caseId, label: pair.label.trim() || "正面", follow_up_label: pair.followUpLabel.trim(), sort_order: index, before_private_path: beforePath, after_private_path: afterPath };
-        if (pair.id) {
-          const { error } = await db.from("case_photo_pairs").update(row).eq("id", pair.id);
-          if (error) throw error;
-        } else {
-          const { error } = await db.from("case_photo_pairs").insert(row);
-          if (error) throw error;
+        const uploads = [];
+        try {
+          uploads.push(await uploadPairBlob(caseId, pair, "before", "source"));
+          uploads.push(await uploadPairBlob(caseId, pair, "after", "source"));
+          uploads.push(await uploadPairBlob(caseId, pair, "before", "derivative"));
+          uploads.push(await uploadPairBlob(caseId, pair, "after", "derivative"));
+          const row = {
+            case_id: caseId,
+            label: pair.label.trim() || "正面",
+            follow_up_label: pair.followUpLabel.trim(),
+            sort_order: index,
+            canvas_ratio: photoLayouts.normalizeRatio(pair.canvasRatio),
+            split_direction: photoLayouts.normalizeDirection(pair.splitDirection),
+            before_source_private_path: uploads[0].path || null,
+            after_source_private_path: uploads[1].path || null,
+            before_private_path: uploads[2].path,
+            after_private_path: uploads[3].path,
+            before_crop_rect: pair.beforeCropRect,
+            after_crop_rect: pair.afterCropRect
+          };
+          if (pair.id) {
+            const { error } = await db.from("case_photo_pairs").update(row).eq("id", pair.id);
+            if (error) throw error;
+          } else {
+            const { data, error } = await db.from("case_photo_pairs").insert(row).select("id").single();
+            if (error) throw error;
+            pair.id = data.id;
+          }
+          pair.beforeSourcePrivatePath = uploads[0].path || "";
+          pair.afterSourcePrivatePath = uploads[1].path || "";
+          pair.beforePrivatePath = uploads[2].path;
+          pair.afterPrivatePath = uploads[3].path;
+          pair.beforeSourceBlob = null;
+          pair.afterSourceBlob = null;
+          pair.beforeBlob = null;
+          pair.afterBlob = null;
+          const replacedPaths = uploads.map(upload => upload.replacedPath).filter(Boolean);
+          if (replacedPaths.length) await db.storage.from("case-drafts").remove(replacedPaths);
+        } catch (error) {
+          const newPaths = uploads.filter(upload => upload.uploaded).map(upload => upload.path);
+          if (newPaths.length) await db.storage.from("case-drafts").remove(newPaths);
+          throw error;
         }
       }
 
@@ -523,52 +671,256 @@
     }
   }
 
-  function startCrop(file, pairIndex, side) {
-    const image = new Image();
-    const url = URL.createObjectURL(file);
-    image.onload = () => {
-      cropState = { image, url, pairIndex, side };
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const rounded = value => Math.round(value * 1000000) / 1000000;
+
+  function revokeBlobUrl(url) {
+    if (typeof url === "string" && url.startsWith("blob:")) URL.revokeObjectURL(url);
+  }
+
+  function loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("無法讀取這張圖片"));
+      image.src = url;
+    });
+  }
+
+  async function sanitizeSource(file) {
+    const originalUrl = URL.createObjectURL(file);
+    try {
+      const image = await loadImage(originalUrl);
+      const longestEdge = Math.max(image.naturalWidth, image.naturalHeight);
+      const scale = Math.min(1, 4096 / longestEdge);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/webp", .94));
+      if (!blob) throw new Error("圖片轉檔失敗");
+      const preview = URL.createObjectURL(blob);
+      return { blob, preview, image: await loadImage(preview) };
+    } finally {
+      URL.revokeObjectURL(originalUrl);
+    }
+  }
+
+  function baseCropRect(image, targetWidth, targetHeight) {
+    const sourceWidth = image.naturalWidth;
+    const sourceHeight = image.naturalHeight;
+    const targetRatio = targetWidth / targetHeight;
+    if (sourceWidth / sourceHeight > targetRatio) {
+      return { width: sourceHeight * targetRatio, height: sourceHeight };
+    }
+    return { width: sourceWidth, height: sourceWidth / targetRatio };
+  }
+
+  function cropRectFromControls() {
+    if (!cropState) return null;
+    const { image, layout } = cropState;
+    const base = baseCropRect(image, layout.slotWidth, layout.slotHeight);
+    const zoom = clamp(Number($("crop-zoom").value) || 1, 1, 3);
+    const width = base.width / zoom;
+    const height = base.height / zoom;
+    const maxX = Math.max(0, image.naturalWidth - width);
+    const maxY = Math.max(0, image.naturalHeight - height);
+    const xProgress = (Number($("crop-x").value) + 100) / 200;
+    const yProgress = (Number($("crop-y").value) + 100) / 200;
+    return {
+      sourceX: maxX * xProgress,
+      sourceY: maxY * yProgress,
+      sourceWidth: width,
+      sourceHeight: height,
+      maxX,
+      maxY,
+      normalized: {
+        x: rounded(maxX * xProgress / image.naturalWidth),
+        y: rounded(maxY * yProgress / image.naturalHeight),
+        width: rounded(width / image.naturalWidth),
+        height: rounded(height / image.naturalHeight)
+      }
+    };
+  }
+
+  function setCropControls(rect) {
+    if (!cropState) return;
+    const { image, layout } = cropState;
+    const base = baseCropRect(image, layout.slotWidth, layout.slotHeight);
+    const normalized = normalizeCropRect(rect);
+    if (!normalized) {
       $("crop-zoom").value = "1";
       $("crop-x").value = "0";
       $("crop-y").value = "0";
-      drawCrop();
-      $("crop-dialog").showModal();
-    };
-    image.onerror = () => { URL.revokeObjectURL(url); toast("無法讀取這張圖片"); };
-    image.src = url;
+      return;
+    }
+    const width = normalized.width * image.naturalWidth;
+    const height = normalized.height * image.naturalHeight;
+    const zoom = clamp(Math.min(base.width / width, base.height / height), 1, 3);
+    const cropWidth = base.width / zoom;
+    const cropHeight = base.height / zoom;
+    const maxX = Math.max(0, image.naturalWidth - cropWidth);
+    const maxY = Math.max(0, image.naturalHeight - cropHeight);
+    const centerX = (normalized.x + normalized.width / 2) * image.naturalWidth;
+    const centerY = (normalized.y + normalized.height / 2) * image.naturalHeight;
+    const sourceX = clamp(centerX - cropWidth / 2, 0, maxX);
+    const sourceY = clamp(centerY - cropHeight / 2, 0, maxY);
+    $("crop-zoom").value = String(zoom);
+    $("crop-x").value = String(maxX ? sourceX / maxX * 200 - 100 : 0);
+    $("crop-y").value = String(maxY ? sourceY / maxY * 200 - 100 : 0);
+  }
+
+  function updateCropOutputs() {
+    $("crop-zoom-value").value = `${Math.round(Number($("crop-zoom").value) * 100)}%`;
+    $("crop-x-value").value = `${Math.round((Number($("crop-x").value) + 100) / 2)}%`;
+    $("crop-y-value").value = `${Math.round((Number($("crop-y").value) + 100) / 2)}%`;
   }
 
   function drawCrop() {
     if (!cropState) return;
     const canvas = $("crop-canvas");
     const context = canvas.getContext("2d");
-    const image = cropState.image;
-    const zoom = Number($("crop-zoom").value);
-    const base = Math.max(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight);
-    const scale = base * zoom;
-    const width = image.naturalWidth * scale;
-    const height = image.naturalHeight * scale;
-    const maxX = Math.max(0, (width - canvas.width) / 2);
-    const maxY = Math.max(0, (height - canvas.height) / 2);
-    const x = (canvas.width - width) / 2 + Number($("crop-x").value) / 100 * maxX;
-    const y = (canvas.height - height) / 2 + Number($("crop-y").value) / 100 * maxY;
+    const rect = cropRectFromControls();
     context.fillStyle = "#ddd";
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(image, x, y, width, height);
+    context.drawImage(
+      cropState.image,
+      rect.sourceX,
+      rect.sourceY,
+      rect.sourceWidth,
+      rect.sourceHeight,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+    updateCropOutputs();
+  }
+
+  function openCrop({ image, pairIndex, side, sourceBlob = null, sourcePreview = "", ownsSourcePreview = false, cropRect = null }) {
+    const pair = photoPairs[pairIndex];
+    if (!pair) return;
+    const layout = photoLayouts.getLayout(pair.canvasRatio, pair.splitDirection);
+    const canvas = $("crop-canvas");
+    canvas.width = layout.slotWidth;
+    canvas.height = layout.slotHeight;
+    const slotRatio = layout.slotWidth / layout.slotHeight;
+    const cropWidth = slotRatio <= .4 ? 210 : slotRatio <= .5 ? 280 : slotRatio <= .7 ? 360 : 520;
+    $("crop-stage").style.setProperty("--crop-aspect", `${layout.slotWidth} / ${layout.slotHeight}`);
+    $("crop-stage").style.setProperty("--crop-width", `${cropWidth}px`);
+    $("crop-title").textContent = `${side === "before" ? "術前" : "術後"} · ${layout.ratioLabel} ${layout.directionLabel}`;
+    cropState = { image, pairIndex, side, sourceBlob, sourcePreview, ownsSourcePreview, cropRect, layout, drag: null };
+    setCropControls(cropRect);
+    drawCrop();
+    $("crop-dialog").showModal();
+  }
+
+  async function startCrop(file, pairIndex, side) {
+    if (!isEditable()) return;
+    try {
+      const source = await sanitizeSource(file);
+      openCrop({
+        image: source.image,
+        pairIndex,
+        side,
+        sourceBlob: source.blob,
+        sourcePreview: source.preview,
+        ownsSourcePreview: true
+      });
+    } catch (error) {
+      toast(error.message || "無法讀取這張圖片");
+    }
+  }
+
+  async function editCrop(pairIndex, side) {
+    if (!isEditable()) return;
+    const pair = photoPairs[pairIndex];
+    if (!pair || !hasSource(pair, side)) {
+      toast("舊照片沒有可重新裁切的母圖，請重新上傳");
+      return;
+    }
+    try {
+      let preview = pair[`${side}SourcePreview`] || URL.createObjectURL(pair[`${side}SourceBlob`]);
+      if (!pair[`${side}SourcePreview`]) pair[`${side}SourcePreview`] = preview;
+      let image;
+      try {
+        image = await loadImage(preview);
+      } catch (error) {
+        const sourcePath = pair[`${side}SourcePrivatePath`];
+        if (!sourcePath) throw error;
+        preview = await signedUrl(sourcePath);
+        if (!preview) throw error;
+        pair[`${side}SourcePreview`] = preview;
+        image = await loadImage(preview);
+      }
+      openCrop({ image, pairIndex, side, sourcePreview: preview, cropRect: pair[`${side}CropRect`] });
+    } catch (error) {
+      toast(error.message || "母圖載入失敗，請重新上傳");
+    }
+  }
+
+  function resetCrop() {
+    if (!cropState) return;
+    setCropControls(null);
+    drawCrop();
+  }
+
+  function beginCropDrag(event) {
+    if (!cropState) return;
+    const rect = cropRectFromControls();
+    cropState.drag = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      sourceX: rect.sourceX,
+      sourceY: rect.sourceY,
+      sourceWidth: rect.sourceWidth,
+      sourceHeight: rect.sourceHeight,
+      maxX: rect.maxX,
+      maxY: rect.maxY
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.currentTarget.classList.add("dragging");
+  }
+
+  function moveCropDrag(event) {
+    const drag = cropState?.drag;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const canvasRect = event.currentTarget.getBoundingClientRect();
+    const sourceX = clamp(drag.sourceX - (event.clientX - drag.clientX) / canvasRect.width * drag.sourceWidth, 0, drag.maxX);
+    const sourceY = clamp(drag.sourceY - (event.clientY - drag.clientY) / canvasRect.height * drag.sourceHeight, 0, drag.maxY);
+    $("crop-x").value = String(drag.maxX ? sourceX / drag.maxX * 200 - 100 : 0);
+    $("crop-y").value = String(drag.maxY ? sourceY / drag.maxY * 200 - 100 : 0);
+    drawCrop();
+  }
+
+  function endCropDrag(event) {
+    if (!cropState?.drag || cropState.drag.pointerId !== event.pointerId) return;
+    cropState.drag = null;
+    event.currentTarget.classList.remove("dragging");
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
   async function confirmCrop() {
     if (!cropState) return;
-    const output = document.createElement("canvas");
-    output.width = 900;
-    output.height = 1350;
-    output.getContext("2d").drawImage($("crop-canvas"), 0, 0, output.width, output.height);
-    const blob = await new Promise(resolve => output.toBlob(resolve, "image/webp", .86));
+    const blob = await new Promise(resolve => $("crop-canvas").toBlob(resolve, "image/webp", .86));
     if (!blob) { toast("圖片轉檔失敗"); return; }
-    const pair = photoPairs[cropState.pairIndex];
-    pair[`${cropState.side}Blob`] = blob;
-    pair[`${cropState.side}Preview`] = URL.createObjectURL(blob);
-    URL.revokeObjectURL(cropState.url);
+    const state = cropState;
+    const pair = photoPairs[state.pairIndex];
+    if (!pair) return;
+    revokeBlobUrl(pair[`${state.side}Preview`]);
+    pair[`${state.side}Blob`] = blob;
+    pair[`${state.side}Preview`] = URL.createObjectURL(blob);
+    pair[`${state.side}CropRect`] = cropRectFromControls().normalized;
+    pair[`${state.side}RenderedRatio`] = pair.canvasRatio;
+    pair[`${state.side}RenderedDirection`] = pair.splitDirection;
+    if (state.sourceBlob) {
+      revokeBlobUrl(pair[`${state.side}SourcePreview`]);
+      pair[`${state.side}SourceBlob`] = state.sourceBlob;
+      pair[`${state.side}SourcePreview`] = state.sourcePreview;
+      state.ownsSourcePreview = false;
+    }
     cropState = null;
     $("crop-dialog").close();
     renderPhotoPairs();
@@ -672,8 +1024,16 @@
   $("case-form").addEventListener("submit", async event => { event.preventDefault(); try { await saveCase(); } catch (error) { toast(error.message || "儲存失敗"); } });
   $("submit-review-button").addEventListener("click", submitReview);
   $("confirm-crop").addEventListener("click", confirmCrop);
+  $("reset-crop").addEventListener("click", resetCrop);
   ["crop-zoom", "crop-x", "crop-y"].forEach(id => $(id).addEventListener("input", drawCrop));
-  $("crop-dialog").addEventListener("close", () => { if (cropState?.url) URL.revokeObjectURL(cropState.url); cropState = null; });
+  $("crop-canvas").addEventListener("pointerdown", beginCropDrag);
+  $("crop-canvas").addEventListener("pointermove", moveCropDrag);
+  $("crop-canvas").addEventListener("pointerup", endCropDrag);
+  $("crop-canvas").addEventListener("pointercancel", endCropDrag);
+  $("crop-dialog").addEventListener("close", () => {
+    if (cropState?.ownsSourcePreview) revokeBlobUrl(cropState.sourcePreview);
+    cropState = null;
+  });
   $("status-tabs").addEventListener("click", event => {
     const button = event.target.closest("[data-status]");
     if (!button) return;
