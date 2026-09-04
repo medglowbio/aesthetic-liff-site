@@ -3,11 +3,12 @@
 
   const config = window.SUPABASE_CONFIG || {};
   const photoLayouts = window.CasePhotoLayouts;
+  const cropMath = window.CaseCropMath;
   const initialHashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const initialQueryParams = new URLSearchParams(window.location.search);
   const initialAuthType = initialHashParams.get("type") || initialQueryParams.get("type");
   const initialPasswordSetupFlow = ["invite", "recovery"].includes(initialAuthType) || initialQueryParams.has("code");
-  const configured = Boolean(config.url && config.publishableKey && window.supabase && photoLayouts);
+  const configured = Boolean(config.url && config.publishableKey && window.supabase);
   const db = configured ? window.supabase.createClient(config.url, config.publishableKey, {
     auth: { flowType: "pkce", detectSessionInUrl: true, persistSession: true }
   }) : null;
@@ -46,7 +47,7 @@
   const authGate = window.AdminAuthGate.create({
     hiddenViewIds: ["login-view", "password-setup-view", "admin-app"]
   });
-  const { escapeHtml, parseList, createToast } = window.AdminUI;
+  const { escapeHtml, parseList, createToast, clamp, revokeBlobUrl, loadImage, sanitizeImage } = window.AdminUI;
   const toast = createToast({ duration: 2800 });
   const parseTags = parseList;
   const uid = () => session?.user?.id || "";
@@ -185,19 +186,7 @@
     }));
   }
 
-  function normalizeCropRect(value) {
-    if (!value || typeof value !== "object") return null;
-    const rect = {
-      x: Number(value.x),
-      y: Number(value.y),
-      width: Number(value.width),
-      height: Number(value.height)
-    };
-    if (!Object.values(rect).every(Number.isFinite)) return null;
-    if (rect.x < 0 || rect.y < 0 || rect.width <= 0 || rect.height <= 0) return null;
-    if (rect.x + rect.width > 1.0001 || rect.y + rect.height > 1.0001) return null;
-    return rect;
-  }
+  const normalizeCropRect = value => cropMath.normalizeCropRect(value);
 
   function hasPhoto(pair, side) {
     return Boolean(pair[`${side}Blob`] || pair[`${side}PrivatePath`]);
@@ -258,32 +247,40 @@
     currentCase = item;
     selectedTreatmentIds = new Set((item.case_treatments || []).map(entry => entry.treatment_id));
     deletedPhotoPairs = [];
-    photoPairs = await Promise.all((item.case_photo_pairs || []).sort((a, b) => a.sort_order - b.sort_order).map(async pair => ({
-      clientId: pair.id,
-      id: pair.id,
-      label: pair.label || "正面",
-      followUpLabel: pair.follow_up_label || "",
-      canvasRatio: photoLayouts.normalizeRatio(pair.canvas_ratio),
-      splitDirection: photoLayouts.normalizeDirection(pair.split_direction),
-      beforePrivatePath: pair.before_private_path,
-      afterPrivatePath: pair.after_private_path,
-      beforeSourcePrivatePath: pair.before_source_private_path || "",
-      afterSourcePrivatePath: pair.after_source_private_path || "",
-      beforePreview: await signedUrl(pair.before_private_path),
-      afterPreview: await signedUrl(pair.after_private_path),
-      beforeSourcePreview: await signedUrl(pair.before_source_private_path),
-      afterSourcePreview: await signedUrl(pair.after_source_private_path),
-      beforeCropRect: normalizeCropRect(pair.before_crop_rect),
-      afterCropRect: normalizeCropRect(pair.after_crop_rect),
-      beforeRenderedRatio: photoLayouts.normalizeRatio(pair.canvas_ratio),
-      afterRenderedRatio: photoLayouts.normalizeRatio(pair.canvas_ratio),
-      beforeRenderedDirection: photoLayouts.normalizeDirection(pair.split_direction),
-      afterRenderedDirection: photoLayouts.normalizeDirection(pair.split_direction),
-      beforeBlob: null,
-      afterBlob: null,
-      beforeSourceBlob: null,
-      afterSourceBlob: null
-    })));
+    photoPairs = await Promise.all((item.case_photo_pairs || []).sort((a, b) => a.sort_order - b.sort_order).map(async pair => {
+      const [beforePreview, afterPreview, beforeSourcePreview, afterSourcePreview] = await Promise.all([
+        signedUrl(pair.before_private_path),
+        signedUrl(pair.after_private_path),
+        signedUrl(pair.before_source_private_path),
+        signedUrl(pair.after_source_private_path)
+      ]);
+      return {
+        clientId: pair.id,
+        id: pair.id,
+        label: pair.label || "正面",
+        followUpLabel: pair.follow_up_label || "",
+        canvasRatio: photoLayouts.normalizeRatio(pair.canvas_ratio),
+        splitDirection: photoLayouts.normalizeDirection(pair.split_direction),
+        beforePrivatePath: pair.before_private_path,
+        afterPrivatePath: pair.after_private_path,
+        beforeSourcePrivatePath: pair.before_source_private_path || "",
+        afterSourcePrivatePath: pair.after_source_private_path || "",
+        beforePreview,
+        afterPreview,
+        beforeSourcePreview,
+        afterSourcePreview,
+        beforeCropRect: normalizeCropRect(pair.before_crop_rect),
+        afterCropRect: normalizeCropRect(pair.after_crop_rect),
+        beforeRenderedRatio: photoLayouts.normalizeRatio(pair.canvas_ratio),
+        afterRenderedRatio: photoLayouts.normalizeRatio(pair.canvas_ratio),
+        beforeRenderedDirection: photoLayouts.normalizeDirection(pair.split_direction),
+        afterRenderedDirection: photoLayouts.normalizeDirection(pair.split_direction),
+        beforeBlob: null,
+        afterBlob: null,
+        beforeSourceBlob: null,
+        afterSourceBlob: null
+      };
+    }));
     if (!photoPairs.length) photoPairs = [blankPair()];
     $("case-title").value = item.title || "";
     $("case-id").value = item.id;
@@ -551,10 +548,17 @@
         const pair = completePairs[index];
         const uploads = [];
         try {
-          uploads.push(await uploadPairBlob(caseId, pair, "before", "source"));
-          uploads.push(await uploadPairBlob(caseId, pair, "after", "source"));
-          uploads.push(await uploadPairBlob(caseId, pair, "before", "derivative"));
-          uploads.push(await uploadPairBlob(caseId, pair, "after", "derivative"));
+          // Settled rather than all: a partial failure must still expose the uploads
+          // that succeeded so the catch below can remove them.
+          const results = await Promise.allSettled([
+            uploadPairBlob(caseId, pair, "before", "source"),
+            uploadPairBlob(caseId, pair, "after", "source"),
+            uploadPairBlob(caseId, pair, "before", "derivative"),
+            uploadPairBlob(caseId, pair, "after", "derivative")
+          ]);
+          results.forEach(result => { if (result.status === "fulfilled") uploads.push(result.value); });
+          const failure = results.find(result => result.status === "rejected");
+          if (failure) throw failure.reason;
           const row = {
             case_id: caseId,
             label: pair.label.trim() || "正面",
@@ -671,104 +675,32 @@
     }
   }
 
-  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-  const rounded = value => Math.round(value * 1000000) / 1000000;
-
-  function revokeBlobUrl(url) {
-    if (typeof url === "string" && url.startsWith("blob:")) URL.revokeObjectURL(url);
-  }
-
-  function loadImage(url) {
-    return new Promise((resolve, reject) => {
-      const image = new Image();
-      image.crossOrigin = "anonymous";
-      image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error("無法讀取這張圖片"));
-      image.src = url;
-    });
-  }
-
-  async function sanitizeSource(file) {
-    const originalUrl = URL.createObjectURL(file);
-    try {
-      const image = await loadImage(originalUrl);
-      const longestEdge = Math.max(image.naturalWidth, image.naturalHeight);
-      const scale = Math.min(1, 4096 / longestEdge);
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/webp", .94));
-      if (!blob) throw new Error("圖片轉檔失敗");
-      const preview = URL.createObjectURL(blob);
-      return { blob, preview, image: await loadImage(preview) };
-    } finally {
-      URL.revokeObjectURL(originalUrl);
-    }
-  }
-
-  function baseCropRect(image, targetWidth, targetHeight) {
-    const sourceWidth = image.naturalWidth;
-    const sourceHeight = image.naturalHeight;
-    const targetRatio = targetWidth / targetHeight;
-    if (sourceWidth / sourceHeight > targetRatio) {
-      return { width: sourceHeight * targetRatio, height: sourceHeight };
-    }
-    return { width: sourceWidth, height: sourceWidth / targetRatio };
+  function cropGeometry() {
+    const { image, layout } = cropState;
+    return {
+      sourceWidth: image.naturalWidth,
+      sourceHeight: image.naturalHeight,
+      slotWidth: layout.slotWidth,
+      slotHeight: layout.slotHeight
+    };
   }
 
   function cropRectFromControls() {
     if (!cropState) return null;
-    const { image, layout } = cropState;
-    const base = baseCropRect(image, layout.slotWidth, layout.slotHeight);
-    const zoom = clamp(Number($("crop-zoom").value) || 1, 1, 3);
-    const width = base.width / zoom;
-    const height = base.height / zoom;
-    const maxX = Math.max(0, image.naturalWidth - width);
-    const maxY = Math.max(0, image.naturalHeight - height);
-    const xProgress = (Number($("crop-x").value) + 100) / 200;
-    const yProgress = (Number($("crop-y").value) + 100) / 200;
-    return {
-      sourceX: maxX * xProgress,
-      sourceY: maxY * yProgress,
-      sourceWidth: width,
-      sourceHeight: height,
-      maxX,
-      maxY,
-      normalized: {
-        x: rounded(maxX * xProgress / image.naturalWidth),
-        y: rounded(maxY * yProgress / image.naturalHeight),
-        width: rounded(width / image.naturalWidth),
-        height: rounded(height / image.naturalHeight)
-      }
-    };
+    return cropMath.cropRectFromControls({
+      ...cropGeometry(),
+      zoom: Number($("crop-zoom").value),
+      x: Number($("crop-x").value),
+      y: Number($("crop-y").value)
+    });
   }
 
   function setCropControls(rect) {
     if (!cropState) return;
-    const { image, layout } = cropState;
-    const base = baseCropRect(image, layout.slotWidth, layout.slotHeight);
-    const normalized = normalizeCropRect(rect);
-    if (!normalized) {
-      $("crop-zoom").value = "1";
-      $("crop-x").value = "0";
-      $("crop-y").value = "0";
-      return;
-    }
-    const width = normalized.width * image.naturalWidth;
-    const height = normalized.height * image.naturalHeight;
-    const zoom = clamp(Math.min(base.width / width, base.height / height), 1, 3);
-    const cropWidth = base.width / zoom;
-    const cropHeight = base.height / zoom;
-    const maxX = Math.max(0, image.naturalWidth - cropWidth);
-    const maxY = Math.max(0, image.naturalHeight - cropHeight);
-    const centerX = (normalized.x + normalized.width / 2) * image.naturalWidth;
-    const centerY = (normalized.y + normalized.height / 2) * image.naturalHeight;
-    const sourceX = clamp(centerX - cropWidth / 2, 0, maxX);
-    const sourceY = clamp(centerY - cropHeight / 2, 0, maxY);
-    $("crop-zoom").value = String(zoom);
-    $("crop-x").value = String(maxX ? sourceX / maxX * 200 - 100 : 0);
-    $("crop-y").value = String(maxY ? sourceY / maxY * 200 - 100 : 0);
+    const controls = cropMath.controlsFromCropRect({ ...cropGeometry(), rect });
+    $("crop-zoom").value = String(controls.zoom);
+    $("crop-x").value = String(controls.x);
+    $("crop-y").value = String(controls.y);
   }
 
   function updateCropOutputs() {
@@ -819,7 +751,7 @@
   async function startCrop(file, pairIndex, side) {
     if (!isEditable()) return;
     try {
-      const source = await sanitizeSource(file);
+      const source = await sanitizeImage(file);
       openCrop({
         image: source.image,
         pairIndex,
@@ -841,10 +773,12 @@
       return;
     }
     try {
-      let preview = pair[`${side}SourcePreview`] || URL.createObjectURL(pair[`${side}SourceBlob`]);
-      if (!pair[`${side}SourcePreview`]) pair[`${side}SourcePreview`] = preview;
+      const sourceBlob = pair[`${side}SourceBlob`];
+      let preview = pair[`${side}SourcePreview`] || (sourceBlob ? URL.createObjectURL(sourceBlob) : "");
+      if (preview && !pair[`${side}SourcePreview`]) pair[`${side}SourcePreview`] = preview;
       let image;
       try {
+        if (!preview) throw new Error("母圖預覽網址尚未建立");
         image = await loadImage(preview);
       } catch (error) {
         const sourcePath = pair[`${side}SourcePrivatePath`];
@@ -903,16 +837,18 @@
   }
 
   async function confirmCrop() {
-    if (!cropState) return;
+    const state = cropState;
+    if (!state) return;
+    const rect = cropRectFromControls();
     const blob = await new Promise(resolve => $("crop-canvas").toBlob(resolve, "image/webp", .86));
     if (!blob) { toast("圖片轉檔失敗"); return; }
-    const state = cropState;
+    if (cropState !== state) return;
     const pair = photoPairs[state.pairIndex];
     if (!pair) return;
     revokeBlobUrl(pair[`${state.side}Preview`]);
     pair[`${state.side}Blob`] = blob;
     pair[`${state.side}Preview`] = URL.createObjectURL(blob);
-    pair[`${state.side}CropRect`] = cropRectFromControls().normalized;
+    pair[`${state.side}CropRect`] = rect.normalized;
     pair[`${state.side}RenderedRatio`] = pair.canvasRatio;
     pair[`${state.side}RenderedDirection`] = pair.splitDirection;
     if (state.sourceBlob) {
@@ -927,6 +863,10 @@
   }
 
   async function boot() {
+    if (!photoLayouts || !cropMath) {
+      authGate.showError("照片版型模組載入失敗，請重新整理頁面；若持續失敗請確認 assets/js/ 下的版型與裁切腳本是否已部署。");
+      return;
+    }
     $("setup-warning").hidden = configured;
     $("login-form").querySelector("button").disabled = !configured;
     $("request-password-reset").disabled = !configured;

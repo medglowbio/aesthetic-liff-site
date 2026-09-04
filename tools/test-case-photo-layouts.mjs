@@ -5,6 +5,7 @@ import vm from "node:vm";
 
 const require = createRequire(import.meta.url);
 const layouts = require("../assets/js/case-photo-layouts.js");
+const cropMath = require("../assets/js/case-crop-math.js");
 
 const expected = [
   ["4:3", "horizontal", 1200, 900, 600, 900],
@@ -27,6 +28,73 @@ for (const [ratio, direction, canvasWidth, canvasHeight, slotWidth, slotHeight] 
 
 assert.equal(layouts.normalizeRatio("unknown"), "4:3");
 assert.equal(layouts.normalizeDirection(null), "horizontal");
+
+// ── Crop math ──
+const sources = [
+  [4096, 3072],
+  [3000, 4000],
+  [2400, 2400],
+  [4096, 1024]
+];
+const controlPositions = [
+  [1, 0, 0],
+  [1.75, -100, 100],
+  [2.4, 42.5, -13.5],
+  [3, 100, -100]
+];
+
+for (const [ratio, direction] of expected.map(row => [row[0], row[1]])) {
+  const layout = layouts.getLayout(ratio, direction);
+  for (const [sourceWidth, sourceHeight] of sources) {
+    const geometry = {
+      sourceWidth, sourceHeight, slotWidth: layout.slotWidth, slotHeight: layout.slotHeight
+    };
+    for (const [zoom, x, y] of controlPositions) {
+      const rect = cropMath.cropRectFromControls({ ...geometry, zoom, x, y });
+      const label = `${ratio} ${direction} ${sourceWidth}x${sourceHeight} @${zoom}/${x}/${y}`;
+
+      // The crop window matches the slot aspect ratio and stays inside the source.
+      assert.ok(
+        Math.abs(rect.sourceWidth / rect.sourceHeight - layout.slotWidth / layout.slotHeight) < 1e-9,
+        `${label} keeps the slot aspect ratio`
+      );
+      assert.ok(rect.sourceX >= 0 && rect.sourceY >= 0, `${label} has no negative origin`);
+      assert.ok(rect.sourceX + rect.sourceWidth <= sourceWidth + 1e-6, `${label} stays inside the width`);
+      assert.ok(rect.sourceY + rect.sourceHeight <= sourceHeight + 1e-6, `${label} stays inside the height`);
+
+      // A stored rectangle must survive normalization and restore the same framing.
+      // Stored rects are rounded to 1e-6, so allow well under a pixel of drift.
+      const tolerance = Math.max(sourceWidth, sourceHeight) * 1e-4;
+      assert.ok(cropMath.normalizeCropRect(rect.normalized), `${label} produces a storable rect`);
+      const restored = cropMath.controlsFromCropRect({ ...geometry, rect: rect.normalized });
+      const reapplied = cropMath.cropRectFromControls({ ...geometry, ...restored });
+      assert.ok(Math.abs(reapplied.sourceX - rect.sourceX) < tolerance, `${label} restores sourceX`);
+      assert.ok(Math.abs(reapplied.sourceY - rect.sourceY) < tolerance, `${label} restores sourceY`);
+      assert.ok(Math.abs(reapplied.sourceWidth - rect.sourceWidth) < tolerance, `${label} restores width`);
+      assert.ok(Math.abs(reapplied.sourceHeight - rect.sourceHeight) < tolerance, `${label} restores height`);
+    }
+  }
+}
+
+// Zoom stays within the slider bounds even when a stored rect asks for more.
+const tinyRect = { x: .4, y: .4, width: .01, height: .01 };
+const clamped = cropMath.controlsFromCropRect({
+  sourceWidth: 4096, sourceHeight: 3072, slotWidth: 600, slotHeight: 900, rect: tinyRect
+});
+assert.equal(clamped.zoom, cropMath.MAX_ZOOM);
+assert.ok(clamped.x >= -100 && clamped.x <= 100);
+assert.ok(clamped.y >= -100 && clamped.y <= 100);
+
+// Unusable rectangles fall back to the neutral position instead of wedging the dialog.
+for (const bad of [null, undefined, {}, { x: 0, y: 0, width: 0, height: .5 }, { x: .8, y: 0, width: .5, height: .5 }]) {
+  assert.equal(cropMath.normalizeCropRect(bad), null);
+  assert.deepEqual(
+    cropMath.controlsFromCropRect({
+      sourceWidth: 1200, sourceHeight: 900, slotWidth: 600, slotHeight: 900, rect: bad
+    }),
+    { zoom: cropMath.MIN_ZOOM, x: 0, y: 0 }
+  );
+}
 
 const rows = [{
   id: "case-layout-test",
@@ -88,4 +156,4 @@ assert.equal(result.cases[0].beforeAfterPairs[1].splitDirection, "horizontal");
 assert.match(selectedColumns, /published_canvas_ratio/);
 assert.doesNotMatch(selectedColumns, /source_private_path|crop_rect/);
 
-console.log("Verified all six case photo layouts, public mapping and legacy defaults.");
+console.log("Verified all six case photo layouts, crop round trips, public mapping and legacy defaults.");

@@ -1,0 +1,8 @@
+{
+  "name": "aesthetic-liff-site",
+  "private": true,
+  "description": "Static clinic site with a Supabase-backed admin. No build step; this file only wires up the test command.",
+  "scripts": {
+    "test": "node tools/test-case-photo-layouts.mjs"
+  }
+}

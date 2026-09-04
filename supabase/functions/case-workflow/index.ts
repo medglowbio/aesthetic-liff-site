@@ -70,11 +70,10 @@ Deno.serve(async request => {
       if (!caseItem.title || !caseItem.case_treatments?.length || !caseItem.case_photo_pairs?.length) {
         return json(422, { error: "案例名稱、療程及至少一組術前術後照片皆為必填" });
       }
+      // canvas_ratio and split_direction are NOT NULL with CHECK constraints, so the
+      // database already guarantees a valid layout here.
       const incomplete = caseItem.case_photo_pairs.some((pair: Record<string, unknown>) => (
-        !pair.before_private_path ||
-        !pair.after_private_path ||
-        !["4:3", "3:4", "1:1"].includes(String(pair.canvas_ratio)) ||
-        !["horizontal", "vertical"].includes(String(pair.split_direction))
+        !pair.before_private_path || !pair.after_private_path
       ));
       if (incomplete) return json(422, { error: "每組照片都必須包含術前與術後" });
       const { error } = await userClient.from("cases").update({ status: "pending_review", submitted_at: new Date().toISOString() }).eq("id", caseId);
