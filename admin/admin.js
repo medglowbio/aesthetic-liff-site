@@ -931,7 +931,7 @@
     }
     $("login-message").textContent = "寄送密碼設定信中...";
     const redirectTo = window.location.protocol === "file:"
-      ? "https://medglowbio-ship-it.github.io/aesthetic-liff-site/admin/"
+      ? "https://medglowbio.github.io/aesthetic-liff-site/admin/"
       : new URL("./", window.location.href).href.replace(/[?#].*$/, "");
     const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo });
     $("login-message").textContent = error
