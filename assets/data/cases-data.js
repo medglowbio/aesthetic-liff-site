@@ -1,4 +1,4 @@
-window.CASE_DATA_SCHEMA_VERSION = 1;
+window.CASE_DATA_SCHEMA_VERSION = 2;
 
 /*
 Case records are intentionally separate from index.html so future updates only
@@ -17,6 +17,8 @@ Example shape:
     {
       label: "正面",
       followUpLabel: "療程後三個月",
+      canvasRatio: "4:3",
+      splitDirection: "horizontal",
       before: {
         src: "assets/images/cases/case-0001/before-front.webp",
         alt: "案例 case-0001 正面術前"

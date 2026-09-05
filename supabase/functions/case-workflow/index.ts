@@ -24,7 +24,15 @@ Deno.serve(async request => {
     .select(`
       *,
       case_treatments(treatment_id),
-      case_photo_pairs(id,before_private_path,after_private_path,before_public_path,after_public_path)
+      case_photo_pairs(
+        id,
+        canvas_ratio,
+        split_direction,
+        before_private_path,
+        after_private_path,
+        before_public_path,
+        after_public_path
+      )
     `)
     .eq("id", caseId)
     .maybeSingle();
@@ -62,7 +70,11 @@ Deno.serve(async request => {
       if (!caseItem.title || !caseItem.case_treatments?.length || !caseItem.case_photo_pairs?.length) {
         return json(422, { error: "案例名稱、療程及至少一組術前術後照片皆為必填" });
       }
-      const incomplete = caseItem.case_photo_pairs.some((pair: Record<string, unknown>) => !pair.before_private_path || !pair.after_private_path);
+      // canvas_ratio and split_direction are NOT NULL with CHECK constraints, so the
+      // database already guarantees a valid layout here.
+      const incomplete = caseItem.case_photo_pairs.some((pair: Record<string, unknown>) => (
+        !pair.before_private_path || !pair.after_private_path
+      ));
       if (incomplete) return json(422, { error: "每組照片都必須包含術前與術後" });
       const { error } = await userClient.from("cases").update({ status: "pending_review", submitted_at: new Date().toISOString() }).eq("id", caseId);
       if (error) throw error;
@@ -84,7 +96,12 @@ Deno.serve(async request => {
     async function removePublishedImages() {
       const paths = caseItem.case_photo_pairs.flatMap((pair: Record<string, string | null>) => [pair.before_public_path, pair.after_public_path]).filter(Boolean) as string[];
       if (paths.length) await userClient.storage.from("case-published").remove(paths);
-      await userClient.from("case_photo_pairs").update({ before_public_path: null, after_public_path: null }).eq("case_id", caseId);
+      await userClient.from("case_photo_pairs").update({
+        before_public_path: null,
+        after_public_path: null,
+        published_canvas_ratio: null,
+        published_split_direction: null
+      }).eq("case_id", caseId);
     }
 
     if (action === "publish") {
@@ -116,7 +133,12 @@ Deno.serve(async request => {
             throw new Error(`術後公開圖片上傳失敗：${afterUpload.error.message}`);
           }
           uploaded.push(afterPath);
-          const pairUpdate = await userClient.from("case_photo_pairs").update({ before_public_path: beforePath, after_public_path: afterPath }).eq("id", pair.id);
+          const pairUpdate = await userClient.from("case_photo_pairs").update({
+            before_public_path: beforePath,
+            after_public_path: afterPath,
+            published_canvas_ratio: pair.canvas_ratio,
+            published_split_direction: pair.split_direction
+          }).eq("id", pair.id);
           if (pairUpdate.error) throw pairUpdate.error;
         }
 
@@ -127,7 +149,12 @@ Deno.serve(async request => {
         return json(200, { ok: true, status: "published" });
       } catch (error) {
         if (uploaded.length) await userClient.storage.from("case-published").remove(uploaded);
-        await userClient.from("case_photo_pairs").update({ before_public_path: null, after_public_path: null }).eq("case_id", caseId);
+        await userClient.from("case_photo_pairs").update({
+          before_public_path: null,
+          after_public_path: null,
+          published_canvas_ratio: null,
+          published_split_direction: null
+        }).eq("case_id", caseId);
         throw error;
       }
     }

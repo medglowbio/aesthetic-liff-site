@@ -2,6 +2,7 @@
   "use strict";
 
   const config = window.SUPABASE_CONFIG || {};
+  const photoLayouts = window.CasePhotoLayouts;
   const configured = Boolean(
     config.url &&
     config.publishableKey &&
@@ -30,6 +31,8 @@
         id: pair.id,
         label: pair.label || "對照照片",
         followUpLabel: pair.follow_up_label || "",
+        canvasRatio: photoLayouts ? photoLayouts.normalizeRatio(pair.published_canvas_ratio) : "4:3",
+        splitDirection: photoLayouts ? photoLayouts.normalizeDirection(pair.published_split_direction) : "horizontal",
         before: {
           src: publicImageUrl(pair.before_public_path),
           alt: `案例 ${row.id} ${pair.label || ""}術前照片`
@@ -60,7 +63,10 @@
       .select(`
         id,title,status,display_order,concern_tags,summary,consent_confirmed,
         case_treatments(treatment_id),
-        case_photo_pairs(id,label,follow_up_label,sort_order,before_public_path,after_public_path)
+        case_photo_pairs(
+          id,label,follow_up_label,sort_order,before_public_path,after_public_path,
+          published_canvas_ratio,published_split_direction
+        )
       `)
       .eq("status", "published")
       .eq("consent_confirmed", true)

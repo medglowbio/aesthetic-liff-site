@@ -6,7 +6,7 @@
   <title>內容管理後台 · 艾絲柏美學診所</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=20260829-shared-utils-1">
+  <link rel="stylesheet" href="admin.css?v=20260903-case-layouts-1">
 </head>
 <body>
   <div class="admin-toast" id="admin-toast" role="status"></div>
@@ -111,7 +111,7 @@
           </section>
 
           <section class="form-section">
-            <div class="section-heading"><span>03</span><div><h2>術前術後照片</h2><p>每張照片會裁切成 2:3、900 × 1350 WebP，並移除原始照片 metadata。</p></div></div>
+            <div class="section-heading"><span>03</span><div><h2>術前術後照片</h2><p>可選擇 4:3、3:4 或 1:1 畫布及排列方式；系統會保留已移除 metadata 的私有母圖供重新裁切。</p></div></div>
             <div class="photo-pairs" id="photo-pairs"></div>
             <button class="secondary-button" id="add-photo-pair" type="button">＋ 新增一組照片</button>
           </section>
@@ -140,21 +140,23 @@
 
   <dialog class="crop-dialog" id="crop-dialog">
     <form method="dialog" class="crop-panel">
-      <div class="crop-head"><div><span>IMAGE CROP</span><h2>裁切 2:3 照片</h2></div><button value="cancel" class="icon-button" aria-label="取消">×</button></div>
-      <div class="crop-stage"><canvas id="crop-canvas" width="600" height="900"></canvas></div>
+      <div class="crop-head"><div><span>IMAGE CROP</span><h2 id="crop-title">調整照片構圖</h2></div><button value="cancel" class="icon-button" aria-label="取消">×</button></div>
+      <div class="crop-stage" id="crop-stage"><canvas id="crop-canvas" width="600" height="900"></canvas></div>
       <div class="crop-controls">
-        <label>縮放<input id="crop-zoom" type="range" min="1" max="3" value="1" step="0.01"></label>
-        <label>水平位置<input id="crop-x" type="range" min="-100" max="100" value="0"></label>
-        <label>垂直位置<input id="crop-y" type="range" min="-100" max="100" value="0"></label>
+        <label><span>縮放 <output id="crop-zoom-value">100%</output></span><input id="crop-zoom" type="range" min="1" max="3" value="1" step="0.01"></label>
+        <label><span>水平位置 <output id="crop-x-value">50%</output></span><input id="crop-x" type="range" min="-100" max="100" value="0" step="0.1"></label>
+        <label><span>垂直位置 <output id="crop-y-value">50%</output></span><input id="crop-y" type="range" min="-100" max="100" value="0" step="0.1"></label>
       </div>
-      <div class="crop-actions"><button value="cancel" class="secondary-button">取消</button><button id="confirm-crop" value="default" type="button" class="primary-button">套用裁切</button></div>
+      <div class="crop-actions"><button id="reset-crop" type="button" class="text-button">重設位置</button><button value="cancel" class="secondary-button">取消</button><button id="confirm-crop" value="default" type="button" class="primary-button">套用裁切</button></div>
     </form>
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../assets/config/supabase-config.js"></script>
-  <script src="ui-utils.js?v=20260829-shared-utils-1"></script>
-  <script src="auth-gate.js?v=20260829-shared-utils-1"></script>
-  <script src="admin.js?v=20260829-shared-utils-1"></script>
+  <script src="../assets/js/case-photo-layouts.js?v=20260903-case-layouts-1"></script>
+  <script src="../assets/js/case-crop-math.js?v=20260903-case-layouts-1"></script>
+  <script src="ui-utils.js?v=20260903-case-layouts-1"></script>
+  <script src="auth-gate.js?v=20260903-case-layouts-1"></script>
+  <script src="admin.js?v=20260903-case-layouts-1"></script>
 </body>
 </html>
