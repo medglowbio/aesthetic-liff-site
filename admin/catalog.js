@@ -504,6 +504,21 @@
     applyBusyState(label);
   }
 
+  // Draft-stage audit rows are best effort: the revision itself is already saved,
+  // so a workflow outage must not be reported as a failed save. State transitions
+  // (submit/publish/…) still fail hard, because there the event is the record of
+  // the transition itself.
+  let auditWarning = "";
+
+  async function recordDraftEvent(action) {
+    try {
+      await invoke(action);
+    } catch (error) {
+      console.warn(`Catalog ${action} event logging failed`, error);
+      auditWarning = "，操作紀錄稍後補登";
+    }
+  }
+
   async function ensureRevision(payload) {
     let id = current.id;
     if (!id) id = makeId(current.type, payload.name);
@@ -517,13 +532,14 @@
     const result = await db.from("catalog_revisions").insert({ entity_type: current.type, entity_id: id, payload, created_by: uid() }).select().single();
     if (result.error) throw result.error;
     currentRevision = result.data; current.id = id;
-    await db.from("catalog_events").insert({ revision_id: result.data.id, entity_type: current.type, entity_id: id, actor_id: uid(), event_type: "created" });
+    await recordDraftEvent("created");
     return result.data;
   }
 
   async function saveRevision(silent = false, manageBusy = true) {
     if (busy && manageBusy) return false;
     if (manageBusy) setBusy(true, "儲存中…");
+    auditWarning = "";
     try {
       let payload = normalizePayload(current.type, readPayload(), current.live ? liveToPayload(current.type, current.live) : {});
       if (!payload.name) throw new Error("請填寫名稱");
@@ -540,8 +556,8 @@
         currentRevision = update.data;
         clearPendingImage();
       }
-      await db.from("catalog_events").insert({ revision_id: currentRevision.id, entity_type: current.type, entity_id: current.id, actor_id: uid(), event_type: "saved" });
-      if (!silent) toast("草稿已儲存");
+      await recordDraftEvent("saved");
+      if (!silent) toast(`草稿已儲存${auditWarning}`);
       await loadAll(`revision:${currentRevision.id}`);
       return true;
     } catch (error) {
