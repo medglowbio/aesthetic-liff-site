@@ -3,7 +3,7 @@
   "private": true,
   "description": "Static clinic site with a Supabase-backed admin. No build step; this file only wires up the test command.",
   "scripts": {
-    "test": "node tools/test-case-photo-layouts.mjs && node tools/test-security-config.mjs",
+    "test": "node tools/test-public-contrast.mjs && node tools/test-case-photo-layouts.mjs && node tools/test-security-config.mjs",
     "test:edge": "deno test supabase/functions/_shared/workflow-request.test.ts && deno check supabase/functions/case-workflow/index.ts supabase/functions/catalog-workflow/index.ts"
   }
 }
