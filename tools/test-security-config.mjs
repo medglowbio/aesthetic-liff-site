@@ -26,8 +26,12 @@ assert.doesNotMatch(catalogWorkflow, /client\.from\("catalog_events"\)\.insert/)
 assert.match(catalogWorkflow, /type Action = "created" \| "saved"/);
 assert.match(catalogWorkflow, /action === "created" \|\| action === "saved"/);
 assert.doesNotMatch(catalogAdmin, /\.from\("catalog_events"\)\.insert/);
-assert.match(catalogAdmin, /invoke\("created"\)/);
-assert.match(catalogAdmin, /invoke\("saved"\)/);
+assert.match(catalogAdmin, /recordDraftEvent\("created"\)/);
+assert.match(catalogAdmin, /recordDraftEvent\("saved"\)/);
+// Draft-stage audit rows go through the workflow function, but a failure there
+// must not turn a saved draft into a reported save failure.
+assert.match(catalogAdmin, /async function recordDraftEvent\(action\)[\s\S]*?await invoke\(action\)[\s\S]*?catch/);
+assert.match(catalogAdmin, /toast\(`草稿已儲存\$\{auditWarning\}`\)/);
 
 const publishCatch = caseWorkflow.slice(caseWorkflow.indexOf("} catch (error) {", caseWorkflow.indexOf('if (action === "publish")')));
 assert.match(publishCatch, /from\("cases"\)\.update\(\{\s*status: caseItem\.status/);

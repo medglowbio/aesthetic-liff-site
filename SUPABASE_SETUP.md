@@ -42,11 +42,24 @@ these Storage buckets:
 Do not edit an already-applied migration. Add a new forward-only migration and
 verify it in staging first.
 
-For an existing environment upgrading through
-`202609060001_secure_workflow_audit_events.sql`, deploy both updated Edge
-Functions before running `supabase db push`. The updated functions already use
-the service-role audit client; the migration then safely removes direct browser
-insert access without interrupting workflow event logging.
+### Rollout order for an existing environment
+
+The static site, the Edge Functions and the database are deployed separately,
+and merging to `main` publishes the site to GitHub Pages within about a minute.
+Upgrading through `202609060001_secure_workflow_audit_events.sql` therefore has
+to run in this order:
+
+1. **Deploy both Edge Functions.** The updated functions accept every action the
+   current and the new admin pages send, so they are safe to deploy while the
+   old site is still live.
+2. **Merge to `main`** and let GitHub Pages publish the new admin pages.
+3. **Run `supabase db push`.** The functions now write audit rows with the
+   service-role client, so removing direct browser insert access does not
+   interrupt workflow event logging.
+
+Deploying in a different order does not lose data — draft-stage audit calls
+degrade to a `操作紀錄稍後補登` warning — but the catalog revision history will
+have gaps for anything saved during the window.
 
 ## 3. Deploy Edge Functions
 
