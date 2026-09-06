@@ -1,6 +1,6 @@
 import { json, prepareWorkflowRequest, type WorkflowClient } from "../_shared/workflow-request.ts";
 
-type Action = "submit" | "request_changes" | "publish" | "unpublish" | "archive";
+type Action = "created" | "saved" | "submit" | "request_changes" | "publish" | "unpublish" | "archive";
 type EntityType = "category" | "subcategory" | "treatment";
 
 function required(value: unknown) {
@@ -52,6 +52,14 @@ Deno.serve(async request => {
     });
     if (result.error) throw result.error;
   };
+  const ensureCreatedEvent = async (revision: Record<string, unknown>) => {
+    const result = await auditClient.from("catalog_events")
+      .select("id", { count: "exact", head: true })
+      .eq("revision_id", revision.id)
+      .eq("event_type", "created");
+    if (result.error) throw result.error;
+    if (!result.count) await event(revision, "created");
+  };
 
   try {
     if (action === "unpublish" || (action === "archive" && !body.revisionId)) {
@@ -85,6 +93,16 @@ Deno.serve(async request => {
     if (error) throw error;
     if (!revision) return json(request, 404, { error: "Revision not found" });
     const owner = revision.created_by === user.id;
+
+    if (action === "created" || action === "saved") {
+      if (!owner && !reviewer) return json(request, 403, { error: "此修訂無法記錄" });
+      if (!["draft", "changes_requested"].includes(revision.status)) {
+        return json(request, 409, { error: "僅草稿或退回修改中的修訂可記錄" });
+      }
+      await ensureCreatedEvent(revision);
+      if (action === "saved") await event(revision, "saved");
+      return json(request, 200, { ok: true, status: revision.status });
+    }
 
     if (action === "submit") {
       if (!owner || !["draft", "changes_requested"].includes(revision.status)) return json(request, 403, { error: "此修訂無法送審" });

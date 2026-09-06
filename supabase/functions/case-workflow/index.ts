@@ -31,7 +31,9 @@ Deno.serve(async request => {
         before_private_path,
         after_private_path,
         before_public_path,
-        after_public_path
+        after_public_path,
+        published_canvas_ratio,
+        published_split_direction
       )
     `)
     .eq("id", caseId)
@@ -117,18 +119,19 @@ Deno.serve(async request => {
       try {
         for (const pair of caseItem.case_photo_pairs) {
           if (!pair.before_private_path || !pair.after_private_path) throw new Error("照片資料不完整");
-          const beforePath = `${caseId}/${pair.id}-before.webp`;
-          const afterPath = `${caseId}/${pair.id}-after.webp`;
+          const publicationId = crypto.randomUUID();
+          const beforePath = `${caseId}/${pair.id}-before-${publicationId}.webp`;
+          const afterPath = `${caseId}/${pair.id}-after-${publicationId}.webp`;
           const beforeFile = await userClient.storage.from("case-drafts").download(pair.before_private_path);
           const afterFile = await userClient.storage.from("case-drafts").download(pair.after_private_path);
           if (beforeFile.error) throw beforeFile.error;
           if (afterFile.error) throw afterFile.error;
-          const beforeUpload = await userClient.storage.from("case-published").upload(beforePath, beforeFile.data, { contentType: "image/webp", upsert: true });
+          const beforeUpload = await userClient.storage.from("case-published").upload(beforePath, beforeFile.data, { contentType: "image/webp", upsert: false });
           if (beforeUpload.error) {
             throw new Error(`術前公開圖片上傳失敗：${beforeUpload.error.message}`);
           }
           uploaded.push(beforePath);
-          const afterUpload = await userClient.storage.from("case-published").upload(afterPath, afterFile.data, { contentType: "image/webp", upsert: true });
+          const afterUpload = await userClient.storage.from("case-published").upload(afterPath, afterFile.data, { contentType: "image/webp", upsert: false });
           if (afterUpload.error) {
             throw new Error(`術後公開圖片上傳失敗：${afterUpload.error.message}`);
           }
@@ -146,15 +149,45 @@ Deno.serve(async request => {
         const caseUpdate = await userClient.from("cases").update({ status: "published", reviewed_by: user.id, published_at: now, archived_at: null }).eq("id", caseId);
         if (caseUpdate.error) throw caseUpdate.error;
         await event("published", note);
+
+        const previousPaths = caseItem.case_photo_pairs
+          .flatMap((pair: Record<string, string | null>) => [pair.before_public_path, pair.after_public_path])
+          .filter((path: string | null): path is string => typeof path === "string" && path.length > 0 && !uploaded.includes(path));
+        if (previousPaths.length) {
+          const cleanup = await userClient.storage.from("case-published").remove(previousPaths);
+          if (cleanup.error) console.error("Previous published image cleanup failed", cleanup.error);
+        }
         return json(request, 200, { ok: true, status: "published" });
       } catch (error) {
-        if (uploaded.length) await userClient.storage.from("case-published").remove(uploaded);
-        await userClient.from("case_photo_pairs").update({
-          before_public_path: null,
-          after_public_path: null,
-          published_canvas_ratio: null,
-          published_split_direction: null
-        }).eq("case_id", caseId);
+        const caseRollback = await userClient.from("cases").update({
+          status: caseItem.status,
+          reviewed_by: caseItem.reviewed_by ?? null,
+          published_at: caseItem.published_at ?? null,
+          archived_at: caseItem.archived_at ?? null
+        }).eq("id", caseId);
+        if (caseRollback.error) {
+          console.error("Case publish rollback failed", caseRollback.error);
+          throw new Error(`${error instanceof Error ? error.message : "發布失敗"}；案例狀態回復失敗：${caseRollback.error.message}`);
+        }
+
+        const pairRollbacks = await Promise.all(caseItem.case_photo_pairs.map((pair: Record<string, unknown>) => (
+          userClient.from("case_photo_pairs").update({
+            before_public_path: pair.before_public_path ?? null,
+            after_public_path: pair.after_public_path ?? null,
+            published_canvas_ratio: pair.published_canvas_ratio ?? null,
+            published_split_direction: pair.published_split_direction ?? null
+          }).eq("id", pair.id)
+        )));
+        const pairRollbackError = pairRollbacks.find(result => result.error)?.error;
+        if (pairRollbackError) {
+          console.error("Case photo publish rollback failed", pairRollbackError);
+          throw new Error(`${error instanceof Error ? error.message : "發布失敗"}；照片狀態回復失敗：${pairRollbackError.message}`);
+        }
+
+        if (uploaded.length) {
+          const cleanup = await userClient.storage.from("case-published").remove(uploaded);
+          if (cleanup.error) console.error("Failed publish image cleanup failed", cleanup.error);
+        }
         throw error;
       }
     }

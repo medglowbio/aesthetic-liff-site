@@ -517,7 +517,7 @@
     const result = await db.from("catalog_revisions").insert({ entity_type: current.type, entity_id: id, payload, created_by: uid() }).select().single();
     if (result.error) throw result.error;
     currentRevision = result.data; current.id = id;
-    await db.from("catalog_events").insert({ revision_id: result.data.id, entity_type: current.type, entity_id: id, actor_id: uid(), event_type: "created" });
+    await invoke("created");
     return result.data;
   }
 
@@ -540,7 +540,7 @@
         currentRevision = update.data;
         clearPendingImage();
       }
-      await db.from("catalog_events").insert({ revision_id: currentRevision.id, entity_type: current.type, entity_id: current.id, actor_id: uid(), event_type: "saved" });
+      await invoke("saved");
       if (!silent) toast("草稿已儲存");
       await loadAll(`revision:${currentRevision.id}`);
       return true;

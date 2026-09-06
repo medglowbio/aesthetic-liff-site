@@ -18,10 +18,24 @@ assert.match(shared, /SUPABASE_SERVICE_ROLE_KEY/);
 
 const caseWorkflow = read("supabase/functions/case-workflow/index.ts");
 const catalogWorkflow = read("supabase/functions/catalog-workflow/index.ts");
+const catalogAdmin = read("admin/catalog.js");
 assert.match(caseWorkflow, /auditClient\.from\("case_events"\)\.insert/);
 assert.doesNotMatch(caseWorkflow, /userClient\.from\("case_events"\)\.insert/);
 assert.match(catalogWorkflow, /auditClient\.from\("catalog_events"\)\.insert/);
 assert.doesNotMatch(catalogWorkflow, /client\.from\("catalog_events"\)\.insert/);
+assert.match(catalogWorkflow, /type Action = "created" \| "saved"/);
+assert.match(catalogWorkflow, /action === "created" \|\| action === "saved"/);
+assert.doesNotMatch(catalogAdmin, /\.from\("catalog_events"\)\.insert/);
+assert.match(catalogAdmin, /invoke\("created"\)/);
+assert.match(catalogAdmin, /invoke\("saved"\)/);
+
+const publishCatch = caseWorkflow.slice(caseWorkflow.indexOf("} catch (error) {", caseWorkflow.indexOf('if (action === "publish")')));
+assert.match(publishCatch, /from\("cases"\)\.update\(\{\s*status: caseItem\.status/);
+assert.match(publishCatch, /published_canvas_ratio: pair\.published_canvas_ratio/);
+assert.ok(
+  publishCatch.indexOf('from("cases").update') < publishCatch.indexOf('storage.from("case-published").remove(uploaded)'),
+  "case status is restored before failed publish images are removed"
+);
 
 const migration = read("supabase/migrations/202609060001_secure_workflow_audit_events.sql");
 assert.match(migration, /revoke insert on public\.case_events from authenticated/);
