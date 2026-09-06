@@ -13,4 +13,6 @@ Treatment, case and doctor directory for GitHub Pages and LINE LIFF.
 
 ## Supabase
 
-Database migrations and Edge Functions live in `supabase/`. Apply them with the Supabase CLI from the repository root. Never commit service-role keys or the local `supabase/.temp/` directory.
+Database migrations and Edge Functions live in `supabase/`. Follow
+[`SUPABASE_SETUP.md`](SUPABASE_SETUP.md) when preparing a new environment. Never
+commit service-role keys or the local `supabase/.temp/` directory.

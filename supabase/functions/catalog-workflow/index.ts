@@ -36,17 +36,17 @@ async function publishImage(client: WorkflowClient, draftPath: string, entityTyp
 Deno.serve(async request => {
   const prepared = await prepareWorkflowRequest(request);
   if (prepared.response) return prepared.response;
-  const { client, user, profile } = prepared.context;
+  const { client, auditClient, user, profile } = prepared.context;
 
   let body: { action?: Action; revisionId?: string; entityType?: EntityType; entityId?: string; note?: string };
-  try { body = await request.json(); } catch { return json(400, { error: "Invalid JSON" }); }
+  try { body = await request.json(); } catch { return json(request, 400, { error: "Invalid JSON" }); }
   const action = body.action;
   const note = String(body.note || "").trim().slice(0, 1000);
-  if (!action) return json(400, { error: "action is required" });
+  if (!action) return json(request, 400, { error: "action is required" });
 
   const reviewer = profile.role === "reviewer";
   const event = async (revision: Record<string, unknown>, type: string) => {
-    const result = await client.from("catalog_events").insert({
+    const result = await auditClient.from("catalog_events").insert({
       revision_id: revision.id, entity_type: revision.entity_type, entity_id: revision.entity_id,
       actor_id: user.id, event_type: type, note
     });
@@ -55,55 +55,62 @@ Deno.serve(async request => {
 
   try {
     if (action === "unpublish" || (action === "archive" && !body.revisionId)) {
-      if (!reviewer) return json(403, { error: "Reviewer permission required" });
+      if (!reviewer) return json(request, 403, { error: "Reviewer permission required" });
       const type = body.entityType;
       const id = required(body.entityId);
-      if (!type || !id) return json(400, { error: "entityType and entityId are required" });
+      if (!type || !id) return json(request, 400, { error: "entityType and entityId are required" });
       const status = action === "archive" ? "archived" : "unpublished";
       if (type === "category" && action === "archive") {
         const { count } = await client.from("treatment_catalog").select("id", { count: "exact", head: true })
           .eq("category_id", id).eq("status", "published").eq("active", true);
-        if (count) return json(409, { error: "此分類仍有已發布療程，請先移動或下架相關療程" });
+        if (count) return json(request, 409, { error: "此分類仍有已發布療程，請先移動或下架相關療程" });
       }
       const table = type === "category" ? "treatment_categories" : type === "subcategory" ? "treatment_subcategories" : "treatment_catalog";
       const changes: Record<string, unknown> = { status };
       if (type === "treatment") changes.active = false;
       const result = await client.from(table).update(changes).eq("id", id);
       if (result.error) throw result.error;
-      await client.from("catalog_events").insert({ entity_type: type, entity_id: id, actor_id: user.id, event_type: action === "archive" ? "archived" : "unpublished", note });
-      return json(200, { ok: true, status });
+      const auditResult = await auditClient.from("catalog_events").insert({
+        entity_type: type,
+        entity_id: id,
+        actor_id: user.id,
+        event_type: action === "archive" ? "archived" : "unpublished",
+        note
+      });
+      if (auditResult.error) throw auditResult.error;
+      return json(request, 200, { ok: true, status });
     }
 
     const { data: revision, error } = await client.from("catalog_revisions").select("*").eq("id", body.revisionId).maybeSingle();
     if (error) throw error;
-    if (!revision) return json(404, { error: "Revision not found" });
+    if (!revision) return json(request, 404, { error: "Revision not found" });
     const owner = revision.created_by === user.id;
 
     if (action === "submit") {
-      if (!owner || !["draft", "changes_requested"].includes(revision.status)) return json(403, { error: "此修訂無法送審" });
+      if (!owner || !["draft", "changes_requested"].includes(revision.status)) return json(request, 403, { error: "此修訂無法送審" });
       const validation = validatePayload(revision.entity_type, revision.payload || {});
-      if (validation) return json(422, { error: validation });
+      if (validation) return json(request, 422, { error: validation });
       const result = await client.from("catalog_revisions").update({ status: "pending_review", submitted_at: new Date().toISOString() }).eq("id", revision.id);
       if (result.error) throw result.error;
       await event(revision, "submitted");
-      return json(200, { ok: true, status: "pending_review" });
+      return json(request, 200, { ok: true, status: "pending_review" });
     }
 
-    if (!reviewer) return json(403, { error: "Reviewer permission required" });
+    if (!reviewer) return json(request, 403, { error: "Reviewer permission required" });
     if (action === "request_changes") {
-      if (revision.status !== "pending_review") return json(409, { error: "僅待審修訂可退回" });
-      if (!note) return json(422, { error: "請填寫退回修改原因" });
+      if (revision.status !== "pending_review") return json(request, 409, { error: "僅待審修訂可退回" });
+      if (!note) return json(request, 422, { error: "請填寫退回修改原因" });
       const result = await client.from("catalog_revisions").update({ status: "changes_requested", reviewed_by: user.id, note }).eq("id", revision.id);
       if (result.error) throw result.error;
       await event(revision, "changes_requested");
-      return json(200, { ok: true, status: "changes_requested" });
+      return json(request, 200, { ok: true, status: "changes_requested" });
     }
-    if (action !== "publish") return json(400, { error: "Unsupported action" });
-    if (revision.status !== "pending_review") return json(409, { error: "僅待審修訂可發布" });
+    if (action !== "publish") return json(request, 400, { error: "Unsupported action" });
+    if (revision.status !== "pending_review") return json(request, 409, { error: "僅待審修訂可發布" });
 
     const payload = { ...(revision.payload || {}) } as Record<string, unknown>;
     const validation = validatePayload(revision.entity_type, payload);
-    if (validation) return json(422, { error: validation });
+    if (validation) return json(request, 422, { error: validation });
     if (required(payload.imageDraftPath)) {
       payload.image = await publishImage(client, required(payload.imageDraftPath), revision.entity_type, revision.entity_id);
     }
@@ -130,7 +137,7 @@ Deno.serve(async request => {
     } else {
       const categoryId = required(payload.categoryId);
       const { data: category } = await client.from("treatment_categories").select("name").eq("id", categoryId).maybeSingle();
-      if (!category) return json(422, { error: "所屬分類尚未發布" });
+      if (!category) return json(request, 422, { error: "所屬分類尚未發布" });
       const row = {
         id: revision.entity_id, name: required(payload.name), category_id: categoryId, category_name: category.name,
         content_type: required(payload.contentType) || "treatment", device_subtitle: required(payload.device),
@@ -159,9 +166,9 @@ Deno.serve(async request => {
     }).eq("id", revision.id);
     if (result.error) throw result.error;
     await event(revision, "published");
-    return json(200, { ok: true, status: "published" });
+    return json(request, 200, { ok: true, status: "published" });
   } catch (error) {
     console.error(error);
-    return json(500, { error: error instanceof Error ? error.message : "Catalog workflow failed" });
+    return json(request, 500, { error: error instanceof Error ? error.message : "Catalog workflow failed" });
   }
 });
