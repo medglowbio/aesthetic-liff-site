@@ -57,9 +57,12 @@ to run in this order:
    service-role client, so removing direct browser insert access does not
    interrupt workflow event logging.
 
-Deploying in a different order does not lose data — draft-stage audit calls
-degrade to a `操作紀錄稍後補登` warning — but the catalog revision history will
-have gaps for anything saved during the window.
+Merging the site before deploying the functions only affects draft-stage audit
+calls: they degrade to a `操作紀錄稍後補登` warning and the saved content remains
+intact. Do **not** run `supabase db push` before deploying the functions. The old
+functions write transition events with the authenticated client; after the
+migration revokes that permission, a transition can update its record and then
+fail to append the matching audit event.
 
 ## 3. Deploy Edge Functions
 
