@@ -15,6 +15,7 @@ assert.match(shared, /@supabase\/supabase-js@2\.115\.0/);
 assert.match(shared, /https:\/\/medglowbio\.github\.io/);
 assert.doesNotMatch(shared, /Access-Control-Allow-Origin["']:\s*["']\*["']/);
 assert.match(shared, /SUPABASE_SERVICE_ROLE_KEY/);
+assert.match(shared, /export function workflowErrorMessage/);
 
 const caseWorkflow = read("supabase/functions/case-workflow/index.ts");
 const catalogWorkflow = read("supabase/functions/catalog-workflow/index.ts");
@@ -44,6 +45,17 @@ assert.ok(
 const migration = read("supabase/migrations/202609060001_secure_workflow_audit_events.sql");
 assert.match(migration, /revoke insert on public\.case_events from authenticated/);
 assert.match(migration, /revoke insert on public\.catalog_events from authenticated/);
+const serviceRoleGrant = read("supabase/migrations/202609060002_grant_workflow_audit_service_role.sql");
+assert.match(serviceRoleGrant, /grant insert on public\.case_events to service_role/);
+assert.match(serviceRoleGrant, /grant insert on public\.catalog_events to service_role/);
+// service_role holds INSERT and nothing else on the audit tables, so the audit
+// client must never read from them - reads run as the signed-in user under RLS.
+assert.doesNotMatch(serviceRoleGrant, /grant[^;]*select[^;]*to service_role/i);
+assert.doesNotMatch(caseWorkflow, /auditClient[\s\S]{0,120}?\.select\(/);
+assert.doesNotMatch(catalogWorkflow, /auditClient[\s\S]{0,120}?\.select\(/);
+assert.match(catalogWorkflow, /client\.from\("catalog_events"\)\s*\n?\s*\.select\(/);
+assert.match(caseWorkflow, /workflowErrorMessage\(error, "Workflow failed"\)/);
+assert.match(catalogWorkflow, /workflowErrorMessage\(error, "Catalog workflow failed"\)/);
 assert.ok(fs.existsSync(new URL("../SUPABASE_SETUP.md", import.meta.url)));
 
 console.log("Verified audit permissions, service-role event writes, CORS allow-list and pinned SDK versions.");

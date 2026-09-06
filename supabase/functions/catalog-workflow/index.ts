@@ -1,4 +1,4 @@
-import { json, prepareWorkflowRequest, type WorkflowClient } from "../_shared/workflow-request.ts";
+import { json, prepareWorkflowRequest, workflowErrorMessage, type WorkflowClient } from "../_shared/workflow-request.ts";
 
 type Action = "created" | "saved" | "submit" | "request_changes" | "publish" | "unpublish" | "archive";
 type EntityType = "category" | "subcategory" | "treatment";
@@ -52,8 +52,12 @@ Deno.serve(async request => {
     });
     if (result.error) throw result.error;
   };
+  // The audit client is granted INSERT only, so this read runs as the signed-in
+  // user, the way case-workflow counts its own created events. Callers of this
+  // helper are already restricted to the revision's owner or a reviewer, which is
+  // exactly what the catalog_events select policy allows.
   const ensureCreatedEvent = async (revision: Record<string, unknown>) => {
-    const result = await auditClient.from("catalog_events")
+    const result = await client.from("catalog_events")
       .select("id", { count: "exact", head: true })
       .eq("revision_id", revision.id)
       .eq("event_type", "created");
@@ -187,6 +191,6 @@ Deno.serve(async request => {
     return json(request, 200, { ok: true, status: "published" });
   } catch (error) {
     console.error(error);
-    return json(request, 500, { error: error instanceof Error ? error.message : "Catalog workflow failed" });
+    return json(request, 500, { error: workflowErrorMessage(error, "Catalog workflow failed") });
   }
 });
