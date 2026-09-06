@@ -1,4 +1,4 @@
-import { json, prepareWorkflowRequest, type WorkflowClient } from "../_shared/workflow-request.ts";
+import { json, prepareWorkflowRequest, workflowErrorMessage, type WorkflowClient } from "../_shared/workflow-request.ts";
 
 type Action = "created" | "saved" | "submit" | "request_changes" | "publish" | "unpublish" | "archive";
 type EntityType = "category" | "subcategory" | "treatment";
@@ -187,6 +187,6 @@ Deno.serve(async request => {
     return json(request, 200, { ok: true, status: "published" });
   } catch (error) {
     console.error(error);
-    return json(request, 500, { error: error instanceof Error ? error.message : "Catalog workflow failed" });
+    return json(request, 500, { error: workflowErrorMessage(error, "Catalog workflow failed") });
   }
 });

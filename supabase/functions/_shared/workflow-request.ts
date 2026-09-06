@@ -64,6 +64,16 @@ export function json(request: Request, status: number, body: unknown) {
   });
 }
 
+export function workflowErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = String((error as { message?: unknown }).message || "").trim();
+    if (message) return message;
+  }
+  if (typeof error === "string" && error.trim()) return error.trim();
+  return fallback;
+}
+
 export async function prepareWorkflowRequest(request: Request): Promise<WorkflowRequestResult> {
   const origin = request.headers.get("Origin");
   if (origin && !isAllowedOrigin(origin)) {

@@ -1,4 +1,4 @@
-import { json, prepareWorkflowRequest } from "../_shared/workflow-request.ts";
+import { json, prepareWorkflowRequest, workflowErrorMessage } from "../_shared/workflow-request.ts";
 
 type WorkflowAction = "created" | "submit" | "request_changes" | "publish" | "unpublish" | "archive";
 
@@ -212,6 +212,6 @@ Deno.serve(async request => {
     return json(request, 400, { error: "Unsupported action" });
   } catch (error) {
     console.error(error);
-    return json(request, 500, { error: error instanceof Error ? error.message : "Workflow failed" });
+    return json(request, 500, { error: workflowErrorMessage(error, "Workflow failed") });
   }
 });
