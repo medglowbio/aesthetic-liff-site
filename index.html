@@ -2230,10 +2230,15 @@ body {
 }
 
 .case-grid {
+  --case-columns: 2;
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--case-columns), minmax(0, 1fr));
+  align-items: start;
   gap: 9px;
 }
+
+.case-grid.is-masonry > .case-card { position: absolute; }
 
 .case-card {
   min-width: 0;
@@ -2537,7 +2542,7 @@ body {
 }
 
 @media (min-width: 720px) {
-  .case-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .case-grid { --case-columns: 3; }
   .case-detail-pairs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 </style>
@@ -4576,6 +4581,79 @@ function renderCaseCard(caseItem) {
   </article>`;
 }
 
+// Keep the source order while placing each card in the shortest column.
+let caseMasonryFrame = 0;
+let caseMasonryObserver = null;
+let caseMasonrySizes = new WeakMap();
+
+function scheduleCaseMasonry() {
+  if (caseMasonryFrame) return;
+  caseMasonryFrame = requestAnimationFrame(layoutCaseMasonry);
+}
+
+function layoutCaseMasonry() {
+  caseMasonryFrame = 0;
+  const grid = document.getElementById("case-grid");
+  if (!grid || !grid.getClientRects().length) return;
+  const cards = Array.from(grid.children).filter(card => card.classList.contains("case-card"));
+  if (!cards.length) return;
+
+  const styles = getComputedStyle(grid);
+  const columns = Number(styles.getPropertyValue("--case-columns"));
+  const gap = parseFloat(styles.columnGap);
+  const width = grid.getBoundingClientRect().width;
+  if (!width) return;
+  const cardWidth = (width - gap * (columns - 1)) / columns;
+
+  // Set every width before reading heights, including after a breakpoint change.
+  cards.forEach(card => { card.style.width = `${cardWidth}px`; });
+  const heights = cards.map(card => card.getBoundingClientRect().height);
+  const columnHeights = Array(columns).fill(0);
+  cards.forEach((card, index) => {
+    const top = Math.min(...columnHeights);
+    const column = columnHeights.indexOf(top);
+    card.style.left = `${column * (cardWidth + gap)}px`;
+    card.style.top = `${top}px`;
+    columnHeights[column] = top + heights[index] + gap;
+  });
+  grid.style.height = `${Math.max(...columnHeights) - gap}px`;
+  grid.classList.add("is-masonry");
+}
+
+function resetCaseMasonry(grid) {
+  cancelAnimationFrame(caseMasonryFrame);
+  caseMasonryFrame = 0;
+  if (caseMasonryObserver) caseMasonryObserver.disconnect();
+  caseMasonrySizes = new WeakMap();
+  grid.classList.remove("is-masonry");
+  grid.style.removeProperty("height");
+  // renderCases replaces the old cards immediately after this reset.
+}
+
+function observeCaseMasonry(grid) {
+  // Older clients retain the normal responsive Grid layout.
+  if (typeof ResizeObserver === "undefined") return;
+  if (!caseMasonryObserver) {
+    caseMasonryObserver = new ResizeObserver(entries => {
+      let changed = false;
+      entries.forEach(entry => {
+        const { width, height } = entry.contentRect;
+        // Ignore container height: layout itself sets it.
+        const size = entry.target === grid ? `${width}` : `${width}:${height}`;
+        if (caseMasonrySizes.get(entry.target) !== size) {
+          caseMasonrySizes.set(entry.target, size);
+          changed = true;
+        }
+      });
+      if (changed) scheduleCaseMasonry();
+    });
+    window.matchMedia("(min-width: 720px)").addEventListener("change", scheduleCaseMasonry);
+  }
+  caseMasonryObserver.observe(grid);
+  Array.from(grid.children).forEach(card => caseMasonryObserver.observe(card));
+  scheduleCaseMasonry();
+}
+
 function renderCases() {
   const allCases = getPublishedCases();
   const filteredCases = getFilteredCases();
@@ -4583,6 +4661,7 @@ function renderCases() {
   const summary = document.getElementById("case-result-summary");
   if (!grid || !summary) return;
 
+  resetCaseMasonry(grid);
   renderCaseFilterPanel();
   renderCaseActiveFilters();
   if (caseDataState === "loading" && !allCases.length) {
@@ -4605,6 +4684,7 @@ function renderCases() {
     return;
   }
   grid.innerHTML = filteredCases.map(renderCaseCard).join("");
+  observeCaseMasonry(grid);
 }
 
 function renderConcernGrid() {
