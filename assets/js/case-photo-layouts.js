@@ -25,7 +25,7 @@
     return directions[value] ? value : "horizontal";
   }
 
-  function getLayout(ratioValue, directionValue) {
+  function getLayout(ratioValue, directionValue, layoutKind = "comparison") {
     const ratio = ratios[normalizeRatio(ratioValue)];
     const direction = directions[normalizeDirection(directionValue)];
     const horizontal = direction.value === "horizontal";
@@ -38,8 +38,8 @@
       directionClass: direction.cssClass,
       canvasWidth: ratio.canvasWidth,
       canvasHeight: ratio.canvasHeight,
-      slotWidth: horizontal ? ratio.canvasWidth / 2 : ratio.canvasWidth,
-      slotHeight: horizontal ? ratio.canvasHeight : ratio.canvasHeight / 2
+      slotWidth: layoutKind === "single" ? ratio.canvasWidth : horizontal ? ratio.canvasWidth / 2 : ratio.canvasWidth,
+      slotHeight: layoutKind === "single" ? ratio.canvasHeight : horizontal ? ratio.canvasHeight : ratio.canvasHeight / 2
     });
   }
 

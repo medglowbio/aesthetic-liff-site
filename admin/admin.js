@@ -4,6 +4,10 @@
   const config = window.SUPABASE_CONFIG || {};
   const photoLayouts = window.CasePhotoLayouts;
   const cropMath = window.CaseCropMath;
+  const media = window.CaseMedia;
+  const uploadsUI = window.CaseMediaUpload;
+  let uploadAbort = null;
+  let mediaBusy = false;
   const initialHashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const initialQueryParams = new URLSearchParams(window.location.search);
   const initialAuthType = initialHashParams.get("type") || initialQueryParams.get("type");
@@ -52,7 +56,7 @@
   const parseTags = parseList;
   const uid = () => session?.user?.id || "";
   const isReviewer = () => profile?.role === "reviewer";
-  const isEditable = () => !currentCase || isReviewer() || (["draft", "changes_requested"].includes(currentCase.status) && currentCase.created_by === uid());
+  const isEditable = () => !currentCase || (["draft", "changes_requested", "pending_review"].includes(currentCase.status) && (isReviewer() || (currentCase.status !== "pending_review" && currentCase.created_by === uid())));
 
   function formatDate(value) {
     if (!value) return "";
@@ -143,7 +147,10 @@
       case_photo_pairs(
         id,label,follow_up_label,sort_order,canvas_ratio,split_direction,
         before_private_path,after_private_path,before_source_private_path,after_source_private_path,
-        before_crop_rect,after_crop_rect,before_public_path,after_public_path
+        before_crop_rect,after_crop_rect,before_public_path,after_public_path,
+        layout_kind,before_media_type,after_media_type,before_video_meta,after_video_meta,
+        before_poster_private_path,after_poster_private_path,before_poster_public_path,after_poster_public_path,
+        published_before_media_type,published_after_media_type
       ),
       case_events(id,event_type,note,actor_id,created_at)
     `).order("updated_at", { ascending: false });
@@ -158,7 +165,7 @@
     renderCaseList();
     if (selectId) {
       const found = cases.find(item => item.id === selectId);
-      if (found) await openCase(found);
+      if (found) await openCase(found, {afterSave:true});
     }
     return true;
   }
@@ -197,7 +204,8 @@
   }
 
   function needsRecrop(pair, side) {
-    return hasPhoto(pair, side) && (
+    return pair[`${side}MediaType`] !== "video" && hasPhoto(pair, side) && (
+      pair[`${side}RenderedKind`] !== pair.layoutKind ||
       pair[`${side}RenderedRatio`] !== pair.canvasRatio ||
       pair[`${side}RenderedDirection`] !== pair.splitDirection
     );
@@ -206,7 +214,9 @@
   function blankPair() {
     return {
       clientId: crypto.randomUUID(), id: null, label: "正面", followUpLabel: "",
-      canvasRatio: "4:3", splitDirection: "horizontal",
+      canvasRatio: "4:3", splitDirection: "horizontal", layoutKind: "comparison",
+      beforeMediaType: "image", afterMediaType: "image", retiredAssets: [],
+      beforeRenderedKind: "comparison", afterRenderedKind: "comparison",
       beforePrivatePath: "", afterPrivatePath: "", beforePreview: "", afterPreview: "",
       beforeSourcePrivatePath: "", afterSourcePrivatePath: "", beforeSourcePreview: "", afterSourcePreview: "",
       beforeCropRect: null, afterCropRect: null,
@@ -217,6 +227,8 @@
   }
 
   function newCase() {
+    if(saving || mediaBusy) {toast("請先完成或取消上傳");return;}
+    releasePreviews();
     currentCase = null;
     selectedTreatmentIds = new Set();
     photoPairs = [blankPair()];
@@ -237,25 +249,37 @@
     $("case-editor").scrollTop = 0;
   }
 
-  async function signedUrl(path) {
+  async function signedUrl(path, bucket = "case-drafts") {
     if (!path) return "";
-    const { data } = await db.storage.from("case-drafts").createSignedUrl(path, 3600);
+    const { data } = await db.storage.from(bucket).createSignedUrl(path, 3600);
     return data?.signedUrl || "";
   }
 
-  async function openCase(item) {
+  async function openCase(item, {afterSave=false} = {}) {
+    if(mediaBusy || (saving && !afterSave)) {toast("請先完成或取消上傳");return;}
+    releasePreviews();
     currentCase = item;
     selectedTreatmentIds = new Set((item.case_treatments || []).map(entry => entry.treatment_id));
     deletedPhotoPairs = [];
     photoPairs = await Promise.all((item.case_photo_pairs || []).sort((a, b) => a.sort_order - b.sort_order).map(async pair => {
       const [beforePreview, afterPreview, beforeSourcePreview, afterSourcePreview] = await Promise.all([
-        signedUrl(pair.before_private_path),
-        signedUrl(pair.after_private_path),
+        signedUrl(pair.before_private_path, pair.before_media_type === "video" ? "case-video-drafts" : "case-drafts"),
+        signedUrl(pair.after_private_path, pair.after_media_type === "video" ? "case-video-drafts" : "case-drafts"),
         signedUrl(pair.before_source_private_path),
         signedUrl(pair.after_source_private_path)
       ]);
       return {
         clientId: pair.id,
+        layoutKind: pair.layout_kind || "comparison",
+        beforeMediaType: pair.before_media_type || "image", afterMediaType: pair.after_media_type || "image",
+        beforeVideoMeta: pair.before_video_meta, afterVideoMeta: pair.after_video_meta,
+        beforePosterPrivatePath: pair.before_poster_private_path, afterPosterPrivatePath: pair.after_poster_private_path,
+        beforePosterPreview: await signedUrl(pair.before_poster_private_path, "case-video-drafts"),
+        afterPosterPreview: await signedUrl(pair.after_poster_private_path, "case-video-drafts"),
+        beforePublicPath: pair.before_public_path, afterPublicPath: pair.after_public_path,
+        beforePublishedType: pair.published_before_media_type, afterPublishedType: pair.published_after_media_type,
+        beforePosterPublicPath: pair.before_poster_public_path, afterPosterPublicPath: pair.after_poster_public_path,
+        beforeRenderedKind: pair.layout_kind || "comparison", afterRenderedKind: pair.layout_kind || "comparison", retiredAssets: [],
         id: pair.id,
         label: pair.label || "正面",
         followUpLabel: pair.follow_up_label || "",
@@ -309,6 +333,8 @@
   }
 
   function closeEditor() {
+    if(saving || mediaBusy) {toast("請先完成或取消上傳");return;}
+    releasePreviews();
     currentCase = null;
     $("case-editor").hidden = true;
     $("editor-empty").hidden = false;
@@ -337,14 +363,15 @@
 
   function renderPhotoPairs() {
     $("photo-pairs").innerHTML = photoPairs.map((pair, index) => {
-      const layout = photoLayouts.getLayout(pair.canvasRatio, pair.splitDirection);
+      const layout = photoLayouts.getLayout(pair.canvasRatio, pair.splitDirection, pair.layoutKind);
       return `
         <article class="photo-pair" data-pair-index="${index}">
-          <div class="photo-pair-head"><strong>照片組 ${index + 1}</strong><button class="remove-pair" type="button" data-remove-pair="${index}">移除此組</button></div>
+          <div class="photo-pair-head"><strong>素材組 ${index + 1}</strong><button class="remove-pair" type="button" data-remove-pair="${index}">移除此組</button></div>
           <div class="photo-meta">
             <input value="${escapeHtml(pair.label)}" data-pair-label="${index}" placeholder="角度，例如：正面">
             <input value="${escapeHtml(pair.followUpLabel)}" data-pair-follow-up="${index}" placeholder="追蹤時間，例如：療程後三個月">
           </div>
+          <div class="photo-segments"><button type="button" data-group-kind="${index}|single" aria-pressed="${pair.layoutKind === 'single'}">單一素材</button><button type="button" data-group-kind="${index}|comparison" aria-pressed="${pair.layoutKind !== 'single'}">術前／術後對照</button><button type="button" data-move-group="${index}|-1">上移</button><button type="button" data-move-group="${index}|1">下移</button></div>
           <div class="photo-layout-controls">
             <fieldset class="photo-layout-group">
               <legend>完整畫布比例</legend>
@@ -359,13 +386,38 @@
               </div>
             </fieldset>
           </div>
-          <div class="photo-comparison-admin ${layout.ratioClass} ${layout.directionClass}">
-            ${photoUploadTemplate(pair, index, "before", "術前")}
-            ${photoUploadTemplate(pair, index, "after", "術後")}
+          <div class="photo-comparison-admin ${layout.ratioClass} ${layout.directionClass} ${pair.layoutKind === 'single' ? 'media-single' : ''}">
+            ${photoUploadTemplate(pair, index, "before", pair.layoutKind === "single" ? "素材" : "術前")}
+            ${pair.layoutKind === "single" ? "" : photoUploadTemplate(pair, index, "after", "術後")}
           </div>
           <p class="photo-layout-size">完整畫布 ${layout.canvasWidth} × ${layout.canvasHeight} px；每張 ${layout.slotWidth} × ${layout.slotHeight} px</p>
         </article>`;
     }).join("");
+    document.querySelectorAll("[data-group-kind]").forEach(button => button.addEventListener("click", () => {
+      if(!isEditable() || saving || mediaBusy) return;
+      const [index,kind] = button.dataset.groupKind.split("|"); const pair=photoPairs[Number(index)];
+      if(kind === "single" && hasPhoto(pair,"after")) {toast("請先移除術後素材，再切換單一素材");return;}
+      pair.layoutKind=kind; renderPhotoPairs();
+    }));
+    document.querySelectorAll("[data-move-group]").forEach(button => button.addEventListener("click", () => {
+      if(!isEditable() || saving || mediaBusy) return;
+      const [index,delta]=button.dataset.moveGroup.split("|").map(Number); const target=index+delta;
+      if(target<0 || target>=photoPairs.length)return;
+      [photoPairs[index],photoPairs[target]]=[photoPairs[target],photoPairs[index]];renderPhotoPairs();
+    }));
+    document.querySelectorAll("[data-remove-media]").forEach(button => button.addEventListener("click", () => {
+      if(!isEditable() || saving || mediaBusy)return;
+      const [index,side]=button.dataset.removeMedia.split(":");clearMedia(photoPairs[Number(index)],side);renderPhotoPairs();
+    }));
+    document.querySelectorAll("[data-poster-input]").forEach(input => input.addEventListener("change", async () => {
+      if(!isEditable() || saving || mediaBusy)return;
+      const [index,side]=input.dataset.posterInput.split(":");const file=input.files?.[0];const pair=photoPairs[Number(index)];
+      if(!file)return;mediaBusy=true;renderWorkflow();
+      try {if(uploadsUI.fileType(file)!=="image")throw new Error("封面請選擇照片");const result=await sanitizeImage(file,{maxEdge:1280,quality:.86});
+        revokeBlobUrl(pair[`${side}PosterPreview`]);pair[`${side}PosterBlob`]=result.blob;pair[`${side}PosterPreview`]=result.preview;
+      }catch(error){toast(error.message);}finally{mediaBusy=false;renderPhotoPairs();renderWorkflow();}
+    }));
+    if(saving || mediaBusy || !isEditable()) document.querySelectorAll("#photo-pairs button,#photo-pairs input").forEach(el=>{el.disabled=true;});
     document.querySelectorAll("[data-remove-pair]").forEach(button => button.addEventListener("click", () => removePhotoPair(Number(button.dataset.removePair))));
     document.querySelectorAll("[data-pair-label]").forEach(input => input.addEventListener("input", () => photoPairs[Number(input.dataset.pairLabel)].label = input.value));
     document.querySelectorAll("[data-pair-follow-up]").forEach(input => input.addEventListener("input", () => photoPairs[Number(input.dataset.pairFollowUp)].followUpLabel = input.value));
@@ -380,7 +432,7 @@
     document.querySelectorAll("[data-photo-input]").forEach(input => input.addEventListener("change", event => {
       const [index, side] = input.dataset.photoInput.split(":");
       const file = event.target.files?.[0];
-      if (file) startCrop(file, Number(index), side);
+      if (file) selectMedia(file, Number(index), side);
       input.value = "";
     }));
     document.querySelectorAll("[data-photo-pick]").forEach(button => button.addEventListener("click", () => {
@@ -393,27 +445,44 @@
     }));
   }
 
-  function photoUploadTemplate(pair, index, side, label) {
-    const preview = side === "before" ? pair.beforePreview : pair.afterPreview;
-    const sourceAvailable = hasSource(pair, side);
-    const recropRequired = needsRecrop(pair, side);
-    const warning = recropRequired
-      ? (sourceAvailable ? "版型已變更，請重新裁切" : "舊照片沒有母圖，請重新上傳")
-      : "";
-    return `<div class="photo-upload">
-      ${preview ? `<img src="${escapeHtml(preview)}" alt="${label}預覽">` : '<span class="photo-placeholder">＋<br>選擇並裁切照片</span>'}
-      <input type="file" accept="image/jpeg,image/png,image/webp" data-photo-input="${index}:${side}" ${isEditable() ? "" : "disabled"}>
-      <span class="photo-label">${label}</span>
-      ${warning ? `<span class="photo-crop-warning">${warning}</span>` : ""}
-      <span class="photo-upload-actions">
-        <button type="button" data-photo-pick="${index}:${side}" ${isEditable() ? "" : "disabled"}>${preview ? "更換" : "選擇"}</button>
-        ${preview ? `<button type="button" data-photo-edit="${index}:${side}" title="${sourceAvailable ? "使用私有母圖重新裁切" : "舊照片沒有可重新裁切的母圖"}" ${isEditable() && sourceAvailable ? "" : "disabled"}>重新裁切</button>` : ""}
-      </span>
-    </div>`;
+  function privateAssets(pair, side) {
+    const bucket=pair[`${side}MediaType`] === "video" ? "case-video-drafts" : "case-drafts";
+    return [{bucket,path:pair[`${side}PrivatePath`]}, {bucket:"case-drafts",path:pair[`${side}SourcePrivatePath`]}, {bucket:"case-video-drafts",path:pair[`${side}PosterPrivatePath`]}].filter(item=>item.path);
+  }
+  function clearMedia(pair,side) {
+    pair.retiredAssets ||= []; pair.retiredAssets.push(...privateAssets(pair,side));
+    for(const key of ["Preview","SourcePreview","PosterPreview"]) revokeBlobUrl(pair[`${side}${key}`]);
+    for(const key of ["PrivatePath","SourcePrivatePath","PosterPrivatePath","Blob","SourceBlob","PosterBlob","Preview","SourcePreview","PosterPreview","VideoMeta","CropRect","PendingUploadPath"]) pair[`${side}${key}`]=null;
+    pair[`${side}MediaType`]="image";
+  }
+  function releasePreviews() {
+    document.querySelectorAll("#photo-pairs video").forEach(video=>{video.pause();video.removeAttribute("src");video.load();});
+    for(const pair of photoPairs) for(const side of ["before","after"]) for(const key of ["Preview","SourcePreview","PosterPreview"]) revokeBlobUrl(pair[`${side}${key}`]);
+  }
+  async function selectMedia(file,index,side) {
+    if(!isEditable() || saving || mediaBusy)return;
+    const pair=photoPairs[index]; mediaBusy=true;renderWorkflow();
+    try {
+      if(uploadsUI.fileType(file)==="image") {await startCrop(file,index,side);return;}
+      toast("正在檢查影片並產生封面…");const result=await uploadsUI.prepareVideo(file);
+      clearMedia(pair,side);pair[`${side}MediaType`]="video";
+      pair[`${side}Blob`]=result.blob;pair[`${side}Preview`]=result.preview;
+      pair[`${side}VideoMeta`]=result.meta;pair[`${side}PosterBlob`]=result.posterBlob;pair[`${side}PosterPreview`]=result.posterPreview;
+    }catch(error){toast(error.message);}finally{mediaBusy=false;renderPhotoPairs();renderWorkflow();}
+  }
+  function photoUploadTemplate(pair,index,side,label) {
+    const preview=pair[`${side}Preview`];const video=pair[`${side}MediaType`]==="video";
+    const warning=needsRecrop(pair,side)?"版型已變更，請重新裁切照片":"";
+    const visual=preview ? (video ? `<video src="${escapeHtml(preview)}" poster="${escapeHtml(pair[`${side}PosterPreview`]||"")}" controls muted playsinline preload="metadata"></video>` : `<img src="${escapeHtml(preview)}" alt="${label}預覽">`) : '<span class="photo-placeholder">＋<br>選擇照片或影片</span>';
+    return `<div class="photo-upload">${visual}<input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,.mp4" data-photo-input="${index}:${side}"><span class="photo-label">${label}</span>${warning?`<span class="photo-crop-warning">${warning}</span>`:""}
+      <span class="photo-upload-actions"><button type="button" data-photo-pick="${index}:${side}">${preview?"更換":"選擇"}</button>
+      ${preview?`<button type="button" data-remove-media="${index}:${side}">移除</button>`:""}
+      ${preview&&!video?`<button type="button" data-photo-edit="${index}:${side}" ${hasSource(pair,side)?"":"disabled"}>重新裁切</button>`:""}
+      ${video?`<label class="poster-picker">更換封面<input type="file" accept="image/jpeg,image/png,image/webp" data-poster-input="${index}:${side}"></label>`:""}</span></div>`;
   }
 
   function updatePairLayout(index, changes) {
-    if (!isEditable()) return;
+    if (!isEditable() || saving || mediaBusy) return;
     const pair = photoPairs[index];
     if (!pair) return;
     if (changes.canvasRatio) pair.canvasRatio = photoLayouts.normalizeRatio(changes.canvasRatio);
@@ -422,7 +491,7 @@
   }
 
   function removePhotoPair(index) {
-    if (!isEditable()) return;
+    if (!isEditable() || saving || mediaBusy) return;
     const [removed] = photoPairs.splice(index, 1);
     if (removed?.id) deletedPhotoPairs.push(removed);
     if (!photoPairs.length) photoPairs.push(blankPair());
@@ -433,11 +502,12 @@
     const status = currentCase?.status || "draft";
     $("review-section").hidden = !currentCase;
     $("submit-review-button").hidden = Boolean(currentCase && !["draft", "changes_requested"].includes(status));
-    $("save-draft-button").disabled = !isEditable() || saving;
-    $("submit-review-button").disabled = !isEditable() || saving;
+    $("cancel-media-upload").hidden = !saving;
+    $("save-draft-button").disabled = !isEditable() || saving || mediaBusy;
+    $("submit-review-button").disabled = !isEditable() || saving || mediaBusy;
     $("save-draft-button").textContent = saving ? savingLabel : "儲存案例";
     $("submit-review-button").textContent = saving ? savingLabel : "送交主管審核";
-    $("add-photo-pair").disabled = !isEditable();
+    $("add-photo-pair").disabled = !isEditable() || saving || mediaBusy;
     $("case-consent").disabled = !isEditable();
     const actions = [];
     if (isReviewer() && status === "pending_review") {
@@ -456,35 +526,43 @@
     $("event-list").innerHTML = events.length ? events.map(item => `<div class="event-item"><time>${formatDate(item.created_at)}</time><p><strong>${eventLabels[item.event_type] || item.event_type}</strong>${item.note ? `<br>${escapeHtml(item.note)}` : ""}</p></div>`).join("") : '<div class="case-list-empty">尚無操作紀錄</div>';
   }
 
-  async function uploadPairBlob(caseId, pair, side, kind) {
-    const source = kind === "source";
-    const blob = pair[`${side}${source ? "Source" : ""}Blob`];
-    const existing = pair[`${side}${source ? "Source" : ""}PrivatePath`];
-    if (!blob) return { path: existing, replacedPath: "", uploaded: false };
-    const suffix = source ? `${side}-source` : side;
-    const path = `${uid()}/${caseId}/${crypto.randomUUID()}-${suffix}.webp`;
-    const { error } = await db.storage.from("case-drafts").upload(path, blob, { contentType: "image/webp", upsert: false });
-    if (error) throw error;
-    return { path, replacedPath: existing, uploaded: true };
+  async function removeAssets(assets) {
+    for(const bucket of new Set(assets.map(item=>item.bucket))) {
+      const paths=[...new Set(assets.filter(item=>item.bucket===bucket).map(item=>item.path).filter(Boolean))];
+      if(!paths.length)continue;const {error}=await db.storage.from(bucket).remove(paths);
+      if(error) {console.warn("Media cleanup failed",error);toast("素材已儲存，部分舊檔案清理失敗，請聯絡管理員");}
+    }
+  }
+  async function uploadPairBlob(caseId,pair,side,kind) {
+    const field=kind==="source"?"Source":kind==="poster"?"Poster":"";
+    const blob=pair[`${side}${field}Blob`], existing=pair[`${side}${field}PrivatePath`];
+    const video=kind==="derivative"&&pair[`${side}MediaType`]==="video";
+    const bucket=video||kind==="poster"?"case-video-drafts":"case-drafts";
+    if(!blob)return {path:existing||null,bucket,uploaded:false};
+    if(uploadAbort.signal.aborted)throw new DOMException("已取消上傳","AbortError");
+    const suffix=`${side}-${kind}.${video?"mp4":"webp"}`;
+    const path=video ? (pair[`${side}PendingUploadPath`] ||= `${uid()}/${caseId}/${crypto.randomUUID()}-${suffix}`) : `${uid()}/${caseId}/${crypto.randomUUID()}-${suffix}`;
+    if(video) await uploadsUI.uploadVideo({db,config,file:blob,path,signal:uploadAbort.signal,onProgress:percent=>{
+      savingLabel=`影片上傳 ${percent}%`;$("media-upload-progress").textContent=`${pair.label} ${side==="before"?"第一素材":"術後"}：${percent}%`;
+      $("save-draft-button").textContent=savingLabel;
+    }});
+    else {if(kind==="poster"&&blob.size>5*1024*1024)throw new Error("封面需小於 5MB");const {error}=await db.storage.from(bucket).upload(path,blob,{contentType:"image/webp",upsert:false});if(error)throw error;}
+    return {path,bucket,replacedPath:existing,uploaded:true,side,field,video};
   }
 
   async function saveCase() {
-    if (saving) return currentCase?.id || null;
+    if (saving || mediaBusy) throw new Error("請等候目前素材處理完成");
     if (!isEditable()) throw new Error("此案例目前不可編輯");
     const title = $("case-title").value.trim();
     if (title.length < 2) throw new Error("請填寫案例名稱");
-    const hasIncompletePair = photoPairs.some(pair => {
-      const hasBefore = hasPhoto(pair, "before");
-      const hasAfter = hasPhoto(pair, "after");
-      return (hasBefore || hasAfter) && !(hasBefore && hasAfter);
-    });
-    if (hasIncompletePair) throw new Error("照片組必須同時包含術前與術後");
     if (photoPairs.some(pair => needsRecrop(pair, "before") || needsRecrop(pair, "after"))) {
       throw new Error("版型已變更，請先重新裁切術前與術後照片");
     }
 
     saving = true;
+    uploadAbort = new AbortController();
     savingLabel = "儲存中…";
+    renderPhotoPairs();
     renderWorkflow();
     try {
       const consent = $("case-consent").checked;
@@ -518,6 +596,9 @@
         if (error) throw error;
         caseId = data.id;
         created = true;
+        // Keep the draft identity when a later upload is cancelled or fails.
+        // Retrying must resume the same object's path, not create another case.
+        currentCase = { ...insertValues, id: caseId };
         if (consent) {
           const consentUpdate = await db.from("cases").update(values).eq("id", caseId);
           if (consentUpdate.error) throw consentUpdate.error;
@@ -532,68 +613,46 @@
       }
 
       for (const removed of deletedPhotoPairs) {
-        const paths = [
-          removed.beforePrivatePath,
-          removed.afterPrivatePath,
-          removed.beforeSourcePrivatePath,
-          removed.afterSourcePrivatePath
-        ].filter(Boolean);
-        if (paths.length) await db.storage.from("case-drafts").remove(paths);
-        const result = await db.from("case_photo_pairs").delete().eq("id", removed.id);
-        if (result.error) throw result.error;
+        const {error}=await db.from("case_photo_pairs").delete().eq("id",removed.id);if(error)throw error;
+        const assets=[...privateAssets(removed,"before"),...privateAssets(removed,"after"),...(removed.retiredAssets||[])];
+        for(const side of ["before","after"]) {
+          assets.push({bucket:removed[`${side}PublishedType`]==="video"?"case-video-published":"case-published",path:removed[`${side}PublicPath`]});
+          assets.push({bucket:"case-video-published",path:removed[`${side}PosterPublicPath`]});
+        }
+        await removeAssets(assets);
       }
-
-      const completePairs = photoPairs.filter(pair => hasPhoto(pair, "before") && hasPhoto(pair, "after"));
-      for (let index = 0; index < completePairs.length; index++) {
-        const pair = completePairs[index];
-        const uploads = [];
+      deletedPhotoPairs=[];
+      for(let index=0;index<photoPairs.length;index++) {
+        const pair=photoPairs[index], uploads=[];
         try {
-          // Settled rather than all: a partial failure must still expose the uploads
-          // that succeeded so the catch below can remove them.
-          const results = await Promise.allSettled([
-            uploadPairBlob(caseId, pair, "before", "source"),
-            uploadPairBlob(caseId, pair, "after", "source"),
-            uploadPairBlob(caseId, pair, "before", "derivative"),
-            uploadPairBlob(caseId, pair, "after", "derivative")
-          ]);
-          results.forEach(result => { if (result.status === "fulfilled") uploads.push(result.value); });
-          const failure = results.find(result => result.status === "rejected");
-          if (failure) throw failure.reason;
-          const row = {
-            case_id: caseId,
-            label: pair.label.trim() || "正面",
-            follow_up_label: pair.followUpLabel.trim(),
-            sort_order: index,
-            canvas_ratio: photoLayouts.normalizeRatio(pair.canvasRatio),
-            split_direction: photoLayouts.normalizeDirection(pair.splitDirection),
-            before_source_private_path: uploads[0].path || null,
-            after_source_private_path: uploads[1].path || null,
-            before_private_path: uploads[2].path,
-            after_private_path: uploads[3].path,
-            before_crop_rect: pair.beforeCropRect,
-            after_crop_rect: pair.afterCropRect
-          };
-          if (pair.id) {
-            const { error } = await db.from("case_photo_pairs").update(row).eq("id", pair.id);
-            if (error) throw error;
-          } else {
-            const { data, error } = await db.from("case_photo_pairs").insert(row).select("id").single();
-            if (error) throw error;
-            pair.id = data.id;
+          const row={case_id:caseId,label:pair.label.trim()||"素材",follow_up_label:pair.followUpLabel.trim(),sort_order:index,
+            canvas_ratio:pair.canvasRatio,split_direction:pair.splitDirection,layout_kind:pair.layoutKind};
+          for(const side of ["before","after"]) {
+            for(const kind of ["source","derivative","poster"]) {
+              const upload=await uploadPairBlob(caseId,pair,side,kind);uploads.push(upload);
+              const field=kind==="source"?"source_private_path":kind==="poster"?"poster_private_path":"private_path";
+              row[`${side}_${field}`]=upload.path;
+            }
+            row[`${side}_media_type`]=pair[`${side}MediaType`]||"image";
+            row[`${side}_video_meta`]=pair[`${side}VideoMeta`]||null;
+            row[`${side}_crop_rect`]=pair[`${side}CropRect`]||null;
           }
-          pair.beforeSourcePrivatePath = uploads[0].path || "";
-          pair.afterSourcePrivatePath = uploads[1].path || "";
-          pair.beforePrivatePath = uploads[2].path;
-          pair.afterPrivatePath = uploads[3].path;
-          pair.beforeSourceBlob = null;
-          pair.afterSourceBlob = null;
-          pair.beforeBlob = null;
-          pair.afterBlob = null;
-          const replacedPaths = uploads.map(upload => upload.replacedPath).filter(Boolean);
-          if (replacedPaths.length) await db.storage.from("case-drafts").remove(replacedPaths);
-        } catch (error) {
-          const newPaths = uploads.filter(upload => upload.uploaded).map(upload => upload.path);
-          if (newPaths.length) await db.storage.from("case-drafts").remove(newPaths);
+          if(uploadAbort.signal.aborted)throw new DOMException("已取消上傳","AbortError");
+          if(pair.id){const {error}=await db.from("case_photo_pairs").update(row).eq("id",pair.id);if(error)throw error;}
+          else {const {data,error}=await db.from("case_photo_pairs").insert(row).select("id").single();if(error)throw error;pair.id=data.id;}
+          const retired=[...(pair.retiredAssets||[])];
+          for(const upload of uploads) {
+            if(upload.uploaded) {
+              pair[`${upload.side}${upload.field}PrivatePath`]=upload.path;
+              pair[`${upload.side}${upload.field}Blob`]=null;
+              if(upload.video)pair[`${upload.side}PendingUploadPath`]=null;
+              if(upload.replacedPath)retired.push({bucket:upload.bucket,path:upload.replacedPath});
+            }
+          }
+          pair.retiredAssets=[];await removeAssets(retired);
+        }catch(error){
+          await removeAssets(uploads.filter(item=>item.uploaded));
+          uploads.filter(item=>item.uploaded&&item.video).forEach(item=>{pair[`${item.side}PendingUploadPath`]=null;});
           throw error;
         }
       }
@@ -614,7 +673,9 @@
       return caseId;
     } finally {
       saving = false;
-      renderWorkflow();
+      uploadAbort = null;
+      $("media-upload-progress").textContent = "";
+      renderPhotoPairs();renderWorkflow();
     }
   }
 
@@ -733,7 +794,7 @@
   function openCrop({ image, pairIndex, side, sourceBlob = null, sourcePreview = "", ownsSourcePreview = false, cropRect = null }) {
     const pair = photoPairs[pairIndex];
     if (!pair) return;
-    const layout = photoLayouts.getLayout(pair.canvasRatio, pair.splitDirection);
+    const layout = photoLayouts.getLayout(pair.canvasRatio, pair.splitDirection, pair.layoutKind);
     const canvas = $("crop-canvas");
     canvas.width = layout.slotWidth;
     canvas.height = layout.slotHeight;
@@ -845,10 +906,13 @@
     if (cropState !== state) return;
     const pair = photoPairs[state.pairIndex];
     if (!pair) return;
+    if(state.sourceBlob) clearMedia(pair,state.side);
+    pair[`${state.side}MediaType`]="image";
     revokeBlobUrl(pair[`${state.side}Preview`]);
     pair[`${state.side}Blob`] = blob;
     pair[`${state.side}Preview`] = URL.createObjectURL(blob);
     pair[`${state.side}CropRect`] = rect.normalized;
+    pair[`${state.side}RenderedKind`] = pair.layoutKind;
     pair[`${state.side}RenderedRatio`] = pair.canvasRatio;
     pair[`${state.side}RenderedDirection`] = pair.splitDirection;
     if (state.sourceBlob) {
@@ -956,11 +1020,13 @@
     $("password-setup-message").textContent = "";
     await loadAppWithError();
   });
-  $("logout-button").addEventListener("click", () => db.auth.signOut());
+  $("logout-button").addEventListener("click", () => {if(saving||mediaBusy){toast("請先完成或取消上傳");return;}releasePreviews();db.auth.signOut();});
   $("new-case-button").addEventListener("click", newCase);
   $("close-editor-button").addEventListener("click", closeEditor);
   $("treatment-search").addEventListener("input", renderTreatments);
-  $("add-photo-pair").addEventListener("click", () => { photoPairs.push(blankPair()); renderPhotoPairs(); });
+  $("add-photo-pair").addEventListener("click", () => { if(saving||mediaBusy||!isEditable())return;photoPairs.push(blankPair()); renderPhotoPairs(); });
+  $("cancel-media-upload").addEventListener("click", () => uploadAbort?.abort());
+  window.addEventListener("beforeunload",event=>{if(saving||mediaBusy){event.preventDefault();event.returnValue="";}});
   $("case-form").addEventListener("submit", async event => { event.preventDefault(); try { await saveCase(); } catch (error) { toast(error.message || "儲存失敗"); } });
   $("submit-review-button").addEventListener("click", submitReview);
   $("confirm-crop").addEventListener("click", confirmCrop);
@@ -971,6 +1037,7 @@
   $("crop-canvas").addEventListener("pointerup", endCropDrag);
   $("crop-canvas").addEventListener("pointercancel", endCropDrag);
   $("crop-dialog").addEventListener("close", () => {
+    if ($("crop-dialog").open) return;
     if (cropState?.ownsSourcePreview) revokeBlobUrl(cropState.sourcePreview);
     cropState = null;
   });

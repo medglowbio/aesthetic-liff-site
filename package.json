@@ -3,7 +3,10 @@
   "private": true,
   "description": "Static clinic site with a Supabase-backed admin. No build step; this file only wires up the test command.",
   "scripts": {
-    "test": "node tools/test-public-contrast.mjs && node tools/test-case-photo-layouts.mjs && node tools/test-security-config.mjs",
-    "test:edge": "deno test supabase/functions/_shared/workflow-request.test.ts && deno check supabase/functions/case-workflow/index.ts supabase/functions/catalog-workflow/index.ts"
+    "test": "node tools/test-public-contrast.mjs && node tools/test-case-photo-layouts.mjs && node tools/test-security-config.mjs && node tools/test-case-media.mjs && node tools/test-case-media-migration.mjs",
+    "test:edge": "deno test --allow-read=tools/fixtures supabase/functions/_shared/workflow-request.test.ts supabase/functions/_shared/case-media-workflow.test.ts && deno check supabase/functions/case-workflow/index.ts supabase/functions/catalog-workflow/index.ts"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8"
   }
 }
