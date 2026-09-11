@@ -258,3 +258,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .editor-header-actions .status-pill { display: none; }
   .form-actions button { flex: 1; }
 }
+
+/* Mixed media editor */
+.photo-comparison-admin.media-single { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr); }
+.photo-upload video { width:100%; height:100%; object-fit:contain; background:var(--paper,#eee); }
+.photo-upload-actions { flex-wrap:wrap; }
+.poster-picker { cursor:pointer; font-size:12px; }
+.poster-picker input { display:block; max-width:150px; }
+#media-upload-progress { font-size:13px; margin:12px 0; }
+.photo-segments [aria-pressed="true"] { background:var(--ink,#302d28); color:white; }

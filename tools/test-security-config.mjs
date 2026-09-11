@@ -38,7 +38,7 @@ const publishCatch = caseWorkflow.slice(caseWorkflow.indexOf("} catch (error) {"
 assert.match(publishCatch, /from\("cases"\)\.update\(\{\s*status: caseItem\.status/);
 assert.match(publishCatch, /published_canvas_ratio: pair\.published_canvas_ratio/);
 assert.ok(
-  publishCatch.indexOf('from("cases").update') < publishCatch.indexOf('storage.from("case-published").remove(uploaded)'),
+  publishCatch.indexOf('from("cases").update') < publishCatch.indexOf('removeAssets(userClient,uploaded)'),
   "case status is restored before failed publish images are removed"
 );
 

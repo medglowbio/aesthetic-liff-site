@@ -1,9 +1,10 @@
+import { validateAssets, copyGroup, publishedAssets, removeAssets, clearSnapshot, snapshot, type Asset } from "../_shared/case-media-workflow.ts";
 import { json, prepareWorkflowRequest, workflowErrorMessage } from "../_shared/workflow-request.ts";
 
 type WorkflowAction = "created" | "submit" | "request_changes" | "publish" | "unpublish" | "archive";
 
-Deno.serve(async request => {
-  const prepared = await prepareWorkflowRequest(request);
+export async function handleCaseWorkflow(request: Request, prepare: typeof prepareWorkflowRequest = prepareWorkflowRequest) {
+  const prepared = await prepare(request);
   if (prepared.response) return prepared.response;
   const { client: userClient, auditClient, user, profile } = prepared.context;
 
@@ -24,17 +25,7 @@ Deno.serve(async request => {
     .select(`
       *,
       case_treatments(treatment_id),
-      case_photo_pairs(
-        id,
-        canvas_ratio,
-        split_direction,
-        before_private_path,
-        after_private_path,
-        before_public_path,
-        after_public_path,
-        published_canvas_ratio,
-        published_split_direction
-      )
+      case_photo_pairs(*)
     `)
     .eq("id", caseId)
     .maybeSingle();
@@ -70,14 +61,10 @@ Deno.serve(async request => {
         return json(request, 403, { error: "This case cannot be submitted" });
       }
       if (!caseItem.title || !caseItem.case_treatments?.length || !caseItem.case_photo_pairs?.length) {
-        return json(request, 422, { error: "案例名稱、療程及至少一組術前術後照片皆為必填" });
+        return json(request, 422, { error: "案例名稱、療程及至少一組完整素材皆為必填" });
       }
-      // canvas_ratio and split_direction are NOT NULL with CHECK constraints, so the
-      // database already guarantees a valid layout here.
-      const incomplete = caseItem.case_photo_pairs.some((pair: Record<string, unknown>) => (
-        !pair.before_private_path || !pair.after_private_path
-      ));
-      if (incomplete) return json(request, 422, { error: "每組照片都必須包含術前與術後" });
+      try { await validateAssets(userClient, caseId, caseItem.case_photo_pairs); }
+      catch(error) { return json(request,422,{error:workflowErrorMessage(error,"素材不完整")}); }
       const { error } = await userClient.from("cases").update({ status: "pending_review", submitted_at: new Date().toISOString() }).eq("id", caseId);
       if (error) throw error;
       await event("submitted", note);
@@ -96,14 +83,9 @@ Deno.serve(async request => {
     }
 
     async function removePublishedImages() {
-      const paths = caseItem.case_photo_pairs.flatMap((pair: Record<string, string | null>) => [pair.before_public_path, pair.after_public_path]).filter(Boolean) as string[];
-      if (paths.length) await userClient.storage.from("case-published").remove(paths);
-      await userClient.from("case_photo_pairs").update({
-        before_public_path: null,
-        after_public_path: null,
-        published_canvas_ratio: null,
-        published_split_direction: null
-      }).eq("case_id", caseId);
+      await removeAssets(userClient,publishedAssets(caseItem.case_photo_pairs));
+      const {error} = await userClient.from("case_photo_pairs").update(clearSnapshot()).eq("case_id",caseId);
+      if(error)throw error;
     }
 
     if (action === "publish") {
@@ -112,36 +94,16 @@ Deno.serve(async request => {
         return json(request, 422, { error: "尚未完成影像公開授權確認" });
       }
       if (!caseItem.case_treatments?.length || !caseItem.case_photo_pairs?.length) {
-        return json(request, 422, { error: "案例缺少療程或照片" });
+        return json(request, 422, { error: "案例缺少療程或素材" });
       }
 
-      const uploaded: string[] = [];
+      try { await validateAssets(userClient,caseId,caseItem.case_photo_pairs); }
+      catch(error) { return json(request,422,{error:workflowErrorMessage(error,"素材不完整")}); }
+      const uploaded: Asset[] = [];
       try {
         for (const pair of caseItem.case_photo_pairs) {
-          if (!pair.before_private_path || !pair.after_private_path) throw new Error("照片資料不完整");
-          const publicationId = crypto.randomUUID();
-          const beforePath = `${caseId}/${pair.id}-before-${publicationId}.webp`;
-          const afterPath = `${caseId}/${pair.id}-after-${publicationId}.webp`;
-          const beforeFile = await userClient.storage.from("case-drafts").download(pair.before_private_path);
-          const afterFile = await userClient.storage.from("case-drafts").download(pair.after_private_path);
-          if (beforeFile.error) throw beforeFile.error;
-          if (afterFile.error) throw afterFile.error;
-          const beforeUpload = await userClient.storage.from("case-published").upload(beforePath, beforeFile.data, { contentType: "image/webp", upsert: false });
-          if (beforeUpload.error) {
-            throw new Error(`術前公開圖片上傳失敗：${beforeUpload.error.message}`);
-          }
-          uploaded.push(beforePath);
-          const afterUpload = await userClient.storage.from("case-published").upload(afterPath, afterFile.data, { contentType: "image/webp", upsert: false });
-          if (afterUpload.error) {
-            throw new Error(`術後公開圖片上傳失敗：${afterUpload.error.message}`);
-          }
-          uploaded.push(afterPath);
-          const pairUpdate = await userClient.from("case_photo_pairs").update({
-            before_public_path: beforePath,
-            after_public_path: afterPath,
-            published_canvas_ratio: pair.canvas_ratio,
-            published_split_direction: pair.split_direction
-          }).eq("id", pair.id);
+          const nextSnapshot = await copyGroup(userClient,caseId,pair,uploaded);
+          const pairUpdate = await userClient.from("case_photo_pairs").update(nextSnapshot).eq("id",pair.id);
           if (pairUpdate.error) throw pairUpdate.error;
         }
 
@@ -150,13 +112,8 @@ Deno.serve(async request => {
         if (caseUpdate.error) throw caseUpdate.error;
         await event("published", note);
 
-        const previousPaths = caseItem.case_photo_pairs
-          .flatMap((pair: Record<string, string | null>) => [pair.before_public_path, pair.after_public_path])
-          .filter((path: string | null): path is string => typeof path === "string" && path.length > 0 && !uploaded.includes(path));
-        if (previousPaths.length) {
-          const cleanup = await userClient.storage.from("case-published").remove(previousPaths);
-          if (cleanup.error) console.error("Previous published image cleanup failed", cleanup.error);
-        }
+        try { await removeAssets(userClient,publishedAssets(caseItem.case_photo_pairs)); }
+        catch(cleanupError) { console.error("Previous published media cleanup failed",cleanupError); }
         return json(request, 200, { ok: true, status: "published" });
       } catch (error) {
         const caseRollback = await userClient.from("cases").update({
@@ -172,21 +129,19 @@ Deno.serve(async request => {
 
         const pairRollbacks = await Promise.all(caseItem.case_photo_pairs.map((pair: Record<string, unknown>) => (
           userClient.from("case_photo_pairs").update({
-            before_public_path: pair.before_public_path ?? null,
-            after_public_path: pair.after_public_path ?? null,
-            published_canvas_ratio: pair.published_canvas_ratio ?? null,
-            published_split_direction: pair.published_split_direction ?? null
+            ...snapshot(pair),
+            published_canvas_ratio: pair.published_canvas_ratio ?? null
           }).eq("id", pair.id)
         )));
         const pairRollbackError = pairRollbacks.find(result => result.error)?.error;
         if (pairRollbackError) {
-          console.error("Case photo publish rollback failed", pairRollbackError);
-          throw new Error(`${error instanceof Error ? error.message : "發布失敗"}；照片狀態回復失敗：${pairRollbackError.message}`);
+          console.error("Case media publish rollback failed", pairRollbackError);
+          throw new Error(`${error instanceof Error ? error.message : "發布失敗"}；素材狀態回復失敗：${pairRollbackError.message}`);
         }
 
         if (uploaded.length) {
-          const cleanup = await userClient.storage.from("case-published").remove(uploaded);
-          if (cleanup.error) console.error("Failed publish image cleanup failed", cleanup.error);
+          try { await removeAssets(userClient,uploaded); }
+          catch(cleanupError) { console.error("Failed publish media cleanup failed",cleanupError); }
         }
         throw error;
       }
@@ -214,4 +169,6 @@ Deno.serve(async request => {
     console.error(error);
     return json(request, 500, { error: workflowErrorMessage(error, "Workflow failed") });
   }
-});
+}
+
+if (import.meta.main) Deno.serve(request => handleCaseWorkflow(request));
